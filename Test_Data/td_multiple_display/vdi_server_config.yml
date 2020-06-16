@@ -1,0 +1,44 @@
+cert: 'ROOTCA.pem'
+domain: 'sh'
+user:
+  - 'autotest1'
+  - 'autotest2'
+  - 'autotest3'
+  - 'autotest4'
+  - 'autotest5'
+password: 'Shanghai2010'
+citrix:
+  server: 'sfnsvr.sh.dto'
+  url: 'https://sfnsvr.sh.dto/citrix/newstore/discovery'
+  win10:
+    name: 'Win10 Automation'
+    host_list:
+      - 'win10-cauto-01.sh.dto'
+      - 'win10-cauto-02.sh.dto'
+      - 'win10-cauto-03.sh.dto'
+view:
+  server: 'vnsvr.sh.dto'
+  rdp win10:
+    name: 'R-Automation'
+    ip_list:
+      - 'R-Automation-1.sh.dto'
+      - 'R-Automation-2.sh.dto'
+      - 'R-Automation-3.sh.dto'
+  blast win10:
+    name: 'B-Automation'
+    ip_list:
+      - 'B-Automation-1.sh.dto'
+      - 'B-Automation-2.sh.dto'
+      - 'B-Automation-3.sh.dto'
+  pcoip win10:
+    name: 'P-Automation'
+    ip_list:
+      - 'P-Automation-1.sh.dto'
+      - 'P-Automation-2.sh.dto'
+      - 'P-Automation-3.sh.dto'
+rdp:
+  rfx win10:
+    - 'autowin10-2.sh.dto'
+  rdp win10:
+    - 'autowin10-1.sh.dto'
+    - 'autowin10-3.sh.dto'

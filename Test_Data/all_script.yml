@@ -1,0 +1,11 @@
+- multiple_display_linux__[1]01.t730_2 monitors_DP 1920x1200 60_Landscape 2x1_citrix_win10_p1: NoRun
+- multiple_display_linux__[1]01.t730_2 monitors_DP 1920x1200 30_Landscape 1x2_citrix_win10_p1: NoRun
+- multiple_display_linux__[1]01.t730_4 Monitors_DP 3840x2160 30_Landscape 2X2_Citrix_win10_P1: Finished
+- check_edocs_version__[1]02.Verify the eDocs version is correct: Finished
+- check_edocs_app__[1]03.Verify  the HP Regulatory Docs application: Finished
+- connect_R1_TC_24G_n_WPA2P__[1]04.Verify connect wireless to SSID R1-TC_2.4G_n_WPA2P: Finished
+- check_estar_enabled__[1]05.Verify the EStar logo is enabled by default: Finished
+- Verify_security_boot_enabled__[2]06.Verify security Boot should be enabled: Finished
+- Verify_image_installed_in_primary_disk__[1]07.Verify the image should be installed in primary disk: Finished
+- Verify_SmartZero_Configuration_correct__[1]08.VerifySmart Zero Configuratio is correct: Finished
+- verify_indo_regulation_working_well__[1]09.Verify indo regulation working well: Finished

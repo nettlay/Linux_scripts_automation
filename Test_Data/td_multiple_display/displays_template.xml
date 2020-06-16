@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<channel name="displays" version="1.0">
+  <property name="Notify" type="empty"/>
+  <property name="Default" type="empty">
+    <property name="DisplayPort-0" type="string" value="DP-0">
+      <property name="Active" type="bool" value="false" />
+      <property name="Resolution" type="string" value="0x0" />
+      <property name="RefreshRate" type="double" value="0.000000" />
+      <property name="Rotation" type="int" value="0" />
+      <property name="Reflection" type="string" value="0" />
+      <property name="Primary" type="bool" value="false" />
+      <property name="Position" type="empty">
+        <property name="X" type="int" value="0" />
+        <property name="Y" type="int" value="0" />
+      </property>
+    </property>
+    <property name="DisplayPort-1" type="string" value="DP-1">
+      <property name="Active" type="bool" value="false" />
+      <property name="Resolution" type="string" value="0x0" />
+      <property name="RefreshRate" type="double" value="0.000000" />
+      <property name="Rotation" type="int" value="0" />
+      <property name="Reflection" type="string" value="0" />
+      <property name="Primary" type="bool" value="false" />
+      <property name="Position" type="empty">
+        <property name="X" type="int" value="0" />
+        <property name="Y" type="int" value="0" />
+      </property>
+    </property>
+    <property name="DisplayPort-2" type="string" value="DP-2">
+      <property name="Active" type="bool" value="false" />
+      <property name="Resolution" type="string" value="0x0" />
+      <property name="RefreshRate" type="double" value="0.000000" />
+      <property name="Rotation" type="int" value="0" />
+      <property name="Reflection" type="string" value="0" />
+      <property name="Primary" type="bool" value="false" />
+      <property name="Position" type="empty">
+        <property name="X" type="int" value="0" />
+        <property name="Y" type="int" value="0" />
+      </property>
+    </property>
+    <property name="DisplayPort-3" type="string" value="DP-3">
+      <property name="Active" type="bool" value="false" />
+      <property name="Resolution" type="string" value="0x0" />
+      <property name="RefreshRate" type="double" value="0.000000" />
+      <property name="Rotation" type="int" value="0" />
+      <property name="Reflection" type="string" value="0" />
+      <property name="Primary" type="bool" value="false" />
+      <property name="Position" type="empty">
+        <property name="X" type="int" value="0" />
+        <property name="Y" type="int" value="0" />
+      </property>
+    </property>
+    <property name="DisplayPort-4" type="string" value="DP-4">
+      <property name="Active" type="bool" value="false" />
+      <property name="Resolution" type="string" value="0x0" />
+      <property name="RefreshRate" type="double" value="0.000000" />
+      <property name="Rotation" type="int" value="0" />
+      <property name="Reflection" type="string" value="0" />
+      <property name="Primary" type="bool" value="false" />
+      <property name="Position" type="empty">
+        <property name="X" type="int" value="0" />
+        <property name="Y" type="int" value="0" />
+      </property>
+    </property>
+    <property name="DisplayPort-5" type="string" value="DP-5">
+      <property name="Active" type="bool" value="false" />
+      <property name="Resolution" type="string" value="0x0" />
+      <property name="RefreshRate" type="double" value="0.000000" />
+      <property name="Rotation" type="int" value="0" />
+      <property name="Reflection" type="string" value="0" />
+      <property name="Primary" type="bool" value="false" />
+      <property name="Position" type="empty">
+        <property name="X" type="int" value="0" />
+        <property name="Y" type="int" value="0" />
+      </property>
+    </property>
+  </property>
+</channel>

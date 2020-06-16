@@ -1,0 +1,63 @@
+T628:
+  VGA: VGA-1
+  N/A: DP-1
+  DVI: HDMI-1
+MT31:
+  LCD: eDP-1
+  HDMI: HDMI-1
+  VGA: DP-1
+  TYPE-C: HDMI-2
+MT46:
+  LCD: eDP
+  HDMI: HDMI-A-0
+  TYPE-C:
+    - DisplayPort-0
+    - DisplayPort-1
+T730:
+  DP:
+    - DispalyPort-0
+    - DispalyPort-1
+#    - DispalyPort-2
+#    - DispalyPort-3
+  EXTEND DP:
+    - DispalyPort-1-4
+    - DispalyPort-1-5
+T740:
+  DP:
+    - DispalyPort-0
+    - DispalyPort-1
+    - DispalyPort-2
+    - DispalyPort-3
+T620:
+  DP:
+    - DispalyPort-0
+    - DispalyPort-1
+  VGA: VGA-0
+MT45:
+  LCD: eDP
+  HDMI: DisplayPort-0
+  N/A:
+    - DispalyPort-1
+    - DispalyPort-2
+#MT46:
+#  LCD: eDP
+#  HDMI: HDMI-A-0
+#  N/A:
+#    - DispalyPort-0
+#    - DispalyPort-1
+MT21:
+  LCD: eDP-1
+  VGA: DP-1
+  HDMI: HDMI-1
+  N/A: HDMI-2
+MT20:
+  LCD: eDP-1
+  VGA: DP-1
+  HDMI: HDMI-1
+  N/A: HDMI-2
+T640:
+  DP:
+    - DispalyPort-0
+    - DispalyPort-1
+    - DispalyPort-2
+  TYPE-C: DisplayPort-0
