@@ -27,6 +27,7 @@ class DisplaySetting:
 
     @staticmethod
     def check_dp_port():
+        # get all connected port
         ports_output = os.popen('xrandr -q | grep connected').readlines()
         ports_name_list = [port.split(' dis')[0].strip() for port in [ports_info_list.split('connected')[0]
                                                               for ports_info_list in ports_output]]
@@ -82,6 +83,7 @@ class DisplaySetting:
             self.mixed_multiply()
 
     def landscape_portrait_coordinate(self, vertical, horizon, init_coordinate, rotation):
+        # 3x2
         if rotation == 'Landscape':
             x, y = 0, 1
         else:

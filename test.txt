@@ -1,0 +1,20 @@
+1. ling 96:
+init_coordinate.append(
+                [(init_coordinate[i - 1][0] + int(self.resolution_list[self.resolution_count - 1].split('x')[x])),
+                 init_coordinate[0][1]])
+修改成
+init_coordinate.append(
+                [(init_coordinate[i - 1][0] + int(self.resolution_list[self.resolution_count - 1].split('x')[x])),
+                 init_coordinate[i-1][1]])
+效果，上对齐
+2. line 96:
+self.resolution_count - 1 是不是要改成self.resolution_count - i
+
+3. Line102:
+return init_coordinate + self.landscape_portrait_coordinate(vertical, horizon - 1, [
+            [0, init_coordinate[0][1] + int(self.resolution_list[self.resolution_count - vertical].split('x')[y])]],
+                                                                    rotation)
+的[self.resolution_count - vertical].split('x')[y])修改成y坐标最长的一个，而不是中间某一个分辨率的Y值
+
+4. Line 173:
+设置主屏方法有问题
