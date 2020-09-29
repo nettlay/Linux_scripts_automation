@@ -1,11 +1,62 @@
-- multiple_display_linux__[1]01.t730_2 monitors_DP 1920x1200 60_Landscape 2x1_citrix_win10_p1: NoRun
-- multiple_display_linux__[1]01.t730_2 monitors_DP 1920x1200 30_Landscape 1x2_citrix_win10_p1: NoRun
-- multiple_display_linux__[1]01.t730_4 Monitors_DP 3840x2160 30_Landscape 2X2_Citrix_win10_P1: Finished
-- check_edocs_version__[1]02.Verify the eDocs version is correct: Finished
-- check_edocs_app__[1]03.Verify  the HP Regulatory Docs application: Finished
-- connect_R1_TC_24G_n_WPA2P__[1]04.Verify connect wireless to SSID R1-TC_2.4G_n_WPA2P: Finished
-- check_estar_enabled__[1]05.Verify the EStar logo is enabled by default: Finished
-- Verify_security_boot_enabled__[2]06.Verify security Boot should be enabled: Finished
-- Verify_image_installed_in_primary_disk__[1]07.Verify the image should be installed in primary disk: Finished
-- Verify_SmartZero_Configuration_correct__[1]08.VerifySmart Zero Configuratio is correct: Finished
-- verify_indo_regulation_working_well__[1]09.Verify indo regulation working well: Finished
+# network
+- wireless_profiles_118_verify_priority_setting_works__wireless_profiles_118_verify_priority_setting_works_lena: norun
+- verify_could_disable_and_enable_wireless__verify_could_disable_and_enable_wireless_nick: norun
+- check_ethernet_link_speed_client_auto__check_ethernet_link_speed_client_auto_nick: norun
+- check_ethernet_link_speed_client_100full__check_ethernet_link_speed_client_100full_nick: norun
+- check_ethernet_link_speed_client_10full__check_ethernet_link_speed_client_10full_nick: norun
+- check_ethernet_link_speed_client_100half__check_ethernet_link_speed_client_100half_nick: norun
+- check_ethernet_link_speed_client_10half__check_ethernet_link_speed_client_10half_nick: norun
+- verify_wpa_supplicant_password_encryption__verify_wpa_supplicant_password_encryption_nick: norun
+- verify_copy_files_via_ftp_with_fiber__verify_copy_files_via_ftp_with_fiber_nick: norun
+- verify_can_connect_to_cisco_vpn__verify_can_connect_to_cisco_vpn_lena: norun
+- verify_can_connect_with_pptp_vpn__verify_can_connect_with_pptp_vpn_lena: norun
+- verify_can_edit_cisco_vpn_connections__verify_can_edit_cisco_vpn_connections_lena: norun
+- verify_can_edit_pptp_vpn_connections__verify_can_edit_pptp_vpn_connections_lena: norun
+- verify_network_via_http_proxy__http_test: norun
+- verify_network_via_https_proxy__https_test: norun
+- verify_network_via_ftp_proxy__ftp_test: norun
+- verify_network_via_no_proxy__noproxy_test: norun
+- verify_the_userlockengaged_modified_automatically__verify_the_userlockengaged_modified_automatically_nick: norun
+- basic_network_function_works_with_specified_fiber__01.Verify basic network function works with specified fiber: norun
+- verify_wireless_profiles_could_add_edit_delete__113. Verify wireless profiles could be added, edited and deleted.: norun
+- verify_wireless_band_option_works_well__116. Verify wireless band option works well.: norun
+- verify_dynamic_ip_and_static_ip_mode_works__04.Verify dynamic IP mode works and 05.Verify static IP mode works: norun
+- verify_additional_DNS_Server_and_Search_Domain_works__06.Verify additional DNS Server and Search Domain works: norun
+- verify_the_userlock_key_can_work_remotely__verify_the_userlock_key_can_work_remotely_nick: norun
+- check_connect_ssid_r1_tc_5g_ac_wpa2p__check_connect_ssid_r1_tc_5g_ac_wpa2p_nick: norun
+- check_connect_ssid_r1_tc_24g_n_wpa2p__check_connect_ssid_r1_tc_24g_n_wpa2p_nick: norun
+- check_connect_ssid_r1_tc_5g_n__check_connect_ssid_r1_tc_5g_n_nick: norun
+- check_connect_ssid_r1_linux_5n_tp_store__check_connect_ssid_r1_linux_5n_tp_store_nick: norun
+- check_connect_ssid_r1_linux_tkip__check_connect_ssid_r1_linux_tkip_nick: norun
+- check_connect_ssid_r1_linux_eap__check_connect_ssid_r1_linux_eap_nick: norun
+- check_connect_ssid_r1_linux_5n_ssl_store__check_connect_ssid_r1_linux_5n_ssl_store_nick: norun
+- check_connect_ssid_r1_linux_24n__check_connect_ssid_r1_linux_24n_nick: norun
+- check_connect_ssid_r1_linux_ac__check_connect_ssid_r1_linux_ac_nick: norun
+- check_connect_ssid_r1_tc_5g_ax_wpa2p__check_connect_ssid_r1_tc_5g_ax_wpa2p_nick: norun
+- check_connect_ssid_r1_tc_24g_ax_wpa2p__check_connect_ssid_r1_tc_24g_ax_wpa2p_nick: norun
+- verify_can_connect_wireless_use_hexdecimal_psk__verify_can_connect_wireless_use_hexdecimal_psk_nick: norun
+- verify_indo_regulation_working_well_on_t240__verify_indo_regulation_working_well_on_t240_lena: norun
+
+# power manager
+- verify_power_menu_can_be_changed_for_user_mode__verify_power_menu_can_be_changed_for_user_mode: finished
+- verify_screensaver_can_be_disabled__verify_screensaver_can_be_disabled: finished
+- verify_automatic_screensaver_activation_can_be_disabled__verify_automatic_screensaver_activation_can_be_disabled: finished
+- Verify_the_CPU_run_with_Balanced_mode_on_AC__[1]01.Verify the CPU run with Balanced mode on AC: finished
+- Verify_the_CPU_run_with_Ondemand_mode_on_Battery__[1]1.Verify the CPU run with Ondemand mode on Battery: finished
+- verify_can_open_power_manager_from_system_tray__03.Verify can open the power manager from the system tray mtc: finished
+- Verify_power_plan_can_work_in_Default_mode_on_AC__[1]03. Verify power plan can work in Default mode on AC: finished
+- verify_s3_can_work__[1]01.Verify S3 can work: finished
+- verify_screen_saverworks_in_different_image_type_mode__[1]11.Verify screen saverworks in different Image Type mode: finished
+- verify_screensaver_works_in_system_image_mode__[1]10.Verify screensaver works in system image mode: finished
+- verify_screen_lock_dialog_can_work_well__09.Verify screen lock dialog can work well: finished
+- sleep_will_support_screenlock__10.Sleep will support screenlock: finished
+- verify_screen_lock_with_password_xd_7x_storefront_win10__06.Verify screen lock with password_XD 7.x Storefront_Win10: finished
+- verify_wol_from_s3__04.Verify WOL from S3: finished
+- verify_screen_saver_works_in_default_mode__01.Verify screen saver works in Default mode: finished
+- verify_require_password_in_admin_mode_only__17.Verify require password in admin mode only: finished
+- verify_sleep_mode_could_be_disabled__09.Verify the sleep mode could be disabled: finished
+- verify_energy_star_shown_with_right_feature__05.[T240] Verify Energy Star Shown with right feature bytes: finished
+- verify_screen_lock_with_password_freerdp__verify_screen_lock_with_password_freerdp: finished
+- verify_screenlock_time_and_info_can_be_modified__verify_screenlock_time_and_info_can_be_modified: finished
+- verify_screen_lock_with_password_view__verify_screen_lock_with_password_view: finished
+- Verify_require_password_for_domain_users__[1]19. Verify require password for domain users: finished

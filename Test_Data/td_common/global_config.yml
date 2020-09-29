@@ -1,0 +1,13 @@
+# log_level:
+# none: 0 or else     log none
+# info:1      log 1
+# warnning:2  log 1,2
+# error:3     log 1,2,3
+# debug:4     log 1,2,3,4
+log:
+  log_level: 4
+td_ftp:
+  server: '15.83.248.197'
+  td_path: '/Files/scripts_data/linux'
+  username: 'Administrator'
+  password: 'Shanghai2020'

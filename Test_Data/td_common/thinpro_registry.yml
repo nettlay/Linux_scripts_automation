@@ -1,0 +1,128 @@
+get:
+  screensaver:
+    default_set:
+      root/screensaver/enableScreensaver: 1
+      root/screensaver/timeoutScreensaver: 10
+      root/screensaver/mode: "Default"
+      root/screensaver/enableCustomLogo: 0
+      root/screensaver/lockScreen: 1
+      root/screensaver/lockScreenDomain: 1
+      root/screensaver/lockScreenUser: 0
+      root/screensaver/lockScreenSession: 1     # sp10.6 add
+set:
+  screensaver:
+    default_set:
+      root/screensaver/enableScreensaver: 1
+      root/screensaver/timeoutScreensaver: 10
+      root/screensaver/mode: "Default"
+      root/screensaver/enableCustomLogo: 0
+      root/screensaver/lockScreen: 1
+      root/screensaver/lockScreenDomain: 1
+      root/screensaver/lockScreenUser: 0
+      root/screensaver/lockScreenSession: 1     # sp10.6 add
+  citrix:
+    multiple_display:
+      root/ConnectionType/xen/connections/{}/address: "{}"
+      root/ConnectionType/xen/connections/{}/domain: "{}"
+      root/ConnectionType/xen/connections/{}/connectionMode: "{}"
+      root/ConnectionType/xen/connections/{}/credentialsType: 'password'
+      root/ConnectionType/xen/connections/{}/password: "{}"
+      root/ConnectionType/xen/connections/{}/username: "{}"
+      root/ConnectionType/xen/general/TWIMode: "Force Seamless Off"
+      root/ConnectionType/xen/general/windowSize: "Full Screen"
+    screen_lock_with_password_step2:
+      # case: 05.control panel -> 01.system -> 06.power manager -> 03.screensaver -> 06
+      root/ConnectionType/xen/connections/{}/address: "{}"
+      root/ConnectionType/xen/connections/{}/domain: "{}"
+      root/ConnectionType/xen/connections/{}/connectionMode: "{}"
+      root/ConnectionType/xen/connections/{}/credentialsType: 'password'
+      root/ConnectionType/xen/connections/{}/password: "{}"
+      root/ConnectionType/xen/connections/{}/username: "{}"
+      root/ConnectionType/xen/connections/{}/SingleSignOn: "0"
+    screen_lock_with_password_step3:
+      # case: 05.control panel -> 01.system -> 06.power manager -> 03.screensaver -> 06
+      root/ConnectionType/xen/connections/{}/address: "{}"
+      root/ConnectionType/xen/connections/{}/domain: "{}"
+      root/ConnectionType/xen/connections/{}/connectionMode: "{}"
+      root/ConnectionType/xen/connections/{}/credentialsType: 'password'
+      root/ConnectionType/xen/connections/{}/password: "{}"
+      root/ConnectionType/xen/connections/{}/username: "{}"
+      root/ConnectionType/xen/connections/{}/SingleSignOn: "1"
+    screen_lock_with_password_step5:
+      # case: 05.control panel -> 01.system -> 06.power manager -> 03.screensaver -> 06
+      root/ConnectionType/xen/connections/{}/address: "{}"
+      root/ConnectionType/xen/connections/{}/connectionMode: "{}"
+      root/ConnectionType/xen/connections/{}/credentialsType: 'password'
+  view:
+    multiple_display:
+      root/ConnectionType/view/connections/{}/credentialsType: 'password'
+      root/ConnectionType/view/connections/{}/domain: '{}'
+      root/ConnectionType/view/connections/{}/desktopSize: "All Monitors"
+      root/ConnectionType/view/connections/{}/username: "{}"
+      root/ConnectionType/view/connections/{}/password: "{}"
+      root/ConnectionType/view/connections/{}/viewSecurityLevel: "Allow all connections"
+      root/ConnectionType/view/connections/{}/server: '{}'
+      root/ConnectionType/view/connections/{}/preferredProtocol: '{}'
+      root/ConnectionType/view/connections/{}/desktop: '{}'
+    screen_lock_with_password_step2:
+      # case: 05.control panel -> 01.system -> 06.power manager -> 03.screensaver -> 08
+      root/ConnectionType/view/connections/{}/credentialsType: 'password'
+      root/ConnectionType/view/connections/{}/domain: '{}'
+      root/ConnectionType/view/connections/{}/desktopSize: "All Monitors"
+      root/ConnectionType/view/connections/{}/username: "{}"
+      root/ConnectionType/view/connections/{}/password: "{}"
+      root/ConnectionType/view/connections/{}/viewSecurityLevel: "Allow all connections"
+      root/ConnectionType/view/connections/{}/server: '{}'
+      root/ConnectionType/view/connections/{}/preferredProtocol: '{}'
+      root/ConnectionType/view/connections/{}/desktop: '{}'
+      root/ConnectionType/view/connections/{}/SingleSignOn: "0"
+    screen_lock_with_password_step3:
+      # case: 05.control panel -> 01.system -> 06.power manager -> 03.screensaver -> 08
+      root/ConnectionType/view/connections/{}/credentialsType: 'password'
+      root/ConnectionType/view/connections/{}/domain: '{}'
+      root/ConnectionType/view/connections/{}/desktopSize: "All Monitors"
+      root/ConnectionType/view/connections/{}/username: "{}"
+      root/ConnectionType/view/connections/{}/password: "{}"
+      root/ConnectionType/view/connections/{}/viewSecurityLevel: "Allow all connections"
+      root/ConnectionType/view/connections/{}/server: '{}'
+      root/ConnectionType/view/connections/{}/preferredProtocol: '{}'
+      root/ConnectionType/view/connections/{}/desktop: '{}'
+      root/ConnectionType/view/connections/{}/SingleSignOn: "1"
+  RDP:
+    multiple_display:
+      root/ConnectionType/freerdp/connections/{}/credentialsType: 'password'
+      root/ConnectionType/freerdp/connections/{}/domain: '{}'
+      root/ConnectionType/freerdp/connections/{}/username: "{}"
+      root/ConnectionType/freerdp/connections/{}/password: "{}"
+      root/ConnectionType/freerdp/connections/{}/securityLevel: "0"
+      root/ConnectionType/freerdp/connections/{}/windowType: 'full'
+      root/ConnectionType/freerdp/connections/{}/address: '{}'
+    screen_lock_with_password_step2:
+      # case: 05.control panel -> 01.system -> 06.power manager -> 03.screensaver -> 07
+      root/ConnectionType/freerdp/connections/{}/credentialsType: 'password'
+      root/ConnectionType/freerdp/connections/{}/domain: '{}'
+      root/ConnectionType/freerdp/connections/{}/username: "{}"
+      root/ConnectionType/freerdp/connections/{}/password: "{}"
+      root/ConnectionType/freerdp/connections/{}/securityLevel: "0"
+      root/ConnectionType/freerdp/connections/{}/windowType: 'full'
+      root/ConnectionType/freerdp/connections/{}/address: '{}'
+      root/ConnectionType/freerdp/connections/{}/SingleSignOn: "0"
+    screen_lock_with_password_step3:
+      # case: 05.control panel -> 01.system -> 06.power manager -> 03.screensaver -> 07
+      root/ConnectionType/freerdp/connections/{}/credentialsType: 'password'
+      root/ConnectionType/freerdp/connections/{}/domain: '{}'
+      root/ConnectionType/freerdp/connections/{}/username: "{}"
+      root/ConnectionType/freerdp/connections/{}/password: "{}"
+      root/ConnectionType/freerdp/connections/{}/securityLevel: "0"
+      root/ConnectionType/freerdp/connections/{}/windowType: 'full'
+      root/ConnectionType/freerdp/connections/{}/address: '{}'
+      root/ConnectionType/freerdp/connections/{}/SingleSignOn: "1"
+    additional_DNS_Server_and_Search_Domain_works_step3:
+      root/ConnectionType/freerdp/connections/{}/credentialsType: 'password'
+      root/ConnectionType/freerdp/connections/{}/domain: '{}'
+      root/ConnectionType/freerdp/connections/{}/username: "{}"
+      root/ConnectionType/freerdp/connections/{}/password: "{}"
+      root/ConnectionType/freerdp/connections/{}/securityLevel: "0"
+      root/ConnectionType/freerdp/connections/{}/windowType: 'full'
+      root/ConnectionType/freerdp/connections/{}/address: '{}'
+      root/ConnectionType/freerdp/connections/{}/tlsVersion: 'auto'
