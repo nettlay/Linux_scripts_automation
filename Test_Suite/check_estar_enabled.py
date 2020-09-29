@@ -1,7 +1,6 @@
 from Common.tool import *
 from Common import picture_operator
 from Common.common_function import *
-from pyautogui import screenshot
 from Test_Script.ts_precheck.precheck_function import SwitchThinProMode
 
 
@@ -18,7 +17,8 @@ def check_powerpic():
 def start(case_name, **kwargs):
     SwitchThinProMode(switch_to='admin')
     name = check_powerpic.__name__
-    ip = get_ip()
+    # ip = get_ip()
+    ip = check_ip_yaml()
     pathyml = get_root_path("Test_Report/{}.yaml".format(ip))
     new_cases_result(pathyml, case_name)
     estart_position = check_powerpic()
@@ -59,7 +59,7 @@ def start(case_name, **kwargs):
         path = get_root_path("Test_Report/img")
         if not os.path.exists(path):
             os.mkdir(path)
-        screenshot(get_root_path("Test_Report/img/{}.jpg".format(name)))
+        picture_operator.capture_screen(get_root_path("Test_Report/img/{}.jpg".format(name)))
         steps = {'step_name': name,
                  'result': 'Fail',
                  'expect': '',  # can be string or pic path

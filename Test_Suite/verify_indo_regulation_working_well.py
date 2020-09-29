@@ -5,17 +5,20 @@
 from time import sleep
 from Test_Script.ts_precheck import network_function as nf, precheck_function as cfn
 from Test_Script.ts_precheck import thinpro_system_function as tsf
-from Common import common_function
+from Common import log, common_function
+from Common.tool import get_root_path
 
-log = common_function.log()
+log = log.log
 
 
 def start(case_name, **kwargs):
     cfn.SwitchThinProMode(switch_to="admin")
     log.info("-" * 60)
     log.info("case name:" + case_name)
-    report_file = nf.system_ip() + '.yaml'
-    cfn.new_cases_result(report_file, case_name)  # new report
+    # report_file = nf.system_ip() + '.yaml'
+    ip = common_function.check_ip_yaml()
+    report_file = get_root_path("Test_Report/{}.yaml".format(ip))
+    common_function.new_cases_result(report_file, case_name)  # new report
     sleep(0.2)
 
     if tsf.sys_build_id() == "AR6":
@@ -27,7 +30,7 @@ def start(case_name, **kwargs):
                      'expect': 'have wireless card',
                      'actual': 'not found the wireless card',
                      'note': 'null'}
-            cfn.update_cases_result(report_file, case_name, pre_check)
+            common_function.update_cases_result(report_file, case_name, pre_check)
             log.info("{:+^70}".format("this case test over"))
             sleep(1)
             return False
@@ -38,7 +41,7 @@ def start(case_name, **kwargs):
                      'expect': 'channel 149, 153, 157, 161 is enable, and channel 165 is disabled',
                      'actual': 'indonesia wireless channel disable not correct',
                      'note': 'null'}
-            cfn.update_cases_result(report_file, case_name, step3)
+            common_function.update_cases_result(report_file, case_name, step3)
             log.info("{:+^70}".format("this case test over"))
             sleep(1)
             return False
@@ -48,7 +51,7 @@ def start(case_name, **kwargs):
                      'expect': 'channel 149, 153, 157, 161 is enable, and channel 165 is disabled',
                      'actual': 'channel 149, 153, 157, 161 is enable, and channel 165 is disabled',
                      'note': 'null'}
-            cfn.update_cases_result(report_file, case_name, step3)
+            common_function.update_cases_result(report_file, case_name, step3)
 
         if not nf.scan_wireless(SSID="R1-Linux-roaming"):
             step4 = {'step_name': 'step1',
@@ -57,7 +60,7 @@ def start(case_name, **kwargs):
                      'actual': 'not can found the R1-Linux-roaming in environment, '
                                'or the R1-Linux-roaming is weak signal',
                      'note': 'null'}
-            cfn.update_cases_result(report_file, case_name, step4)
+            common_function.update_cases_result(report_file, case_name, step4)
             log.info("{:+^70}".format("this case test over"))
             sleep(1)
             return False
@@ -76,7 +79,7 @@ def start(case_name, **kwargs):
                      'expect': 'connect ap R1-Linux-roaming success',
                      'actual': 'connect ap R1-Linux-roaming fail',
                      'note': 'null'}
-            cfn.update_cases_result(report_file, case_name, step4)
+            common_function.update_cases_result(report_file, case_name, step4)
             log.error("connect ap R1-Linux-roaming fail")
             log.info("{:+^70}".format("this case test over"))
             sleep(1)
@@ -92,14 +95,14 @@ def start(case_name, **kwargs):
                      'expect': 'connect ap R1-Linux-roaming success',
                      'actual': 'connect ap R1-Linux-roaming success',
                      'note': 'null'}
-            cfn.update_cases_result(report_file, case_name, step4)
+            common_function.update_cases_result(report_file, case_name, step4)
         else:
             step4 = {'step_name': 'step4',
                      'result': 'Fail',
                      'expect': 'connect ap R1-Linux-roaming success',
                      'actual': 'connect ap R1-Linux-roaming fail',
                      'note': 'null'}
-            cfn.update_cases_result(report_file, case_name, step4)
+            common_function.update_cases_result(report_file, case_name, step4)
 
             nf.del_wireless_profile_from_reg()
             sleep(7)
@@ -115,7 +118,7 @@ def start(case_name, **kwargs):
                      'actual': 'not can found the R1-TC_5G_n in environment, '
                                'or the R1-TC_5G_n is weak signal',
                      'note': 'null'}
-            cfn.update_cases_result(report_file, case_name, step4)
+            common_function.update_cases_result(report_file, case_name, step4)
             log.info("{:+^70}".format("this case test over"))
             sleep(1)
             return False
@@ -135,7 +138,7 @@ def start(case_name, **kwargs):
                      'expect': 'connect ap R1_TC_5G_n success',
                      'actual': 'connect ap R1_TC_5G_n fail',
                      'note': 'null'}
-            cfn.update_cases_result(report_file, case_name, step4)
+            common_function.update_cases_result(report_file, case_name, step4)
             log.error("connect ap R1_TC_5G_n fail")
             log.info("{:+^70}".format("this case test over"))
             sleep(1)
@@ -150,7 +153,7 @@ def start(case_name, **kwargs):
                      'expect': 'connect ap R1_TC_5G_n success',
                      'actual': 'connect ap R1_TC_5G_n success',
                      'note': 'null'}
-            cfn.update_cases_result(report_file, case_name, step4)
+            common_function.update_cases_result(report_file, case_name, step4)
 
         else:
             step4 = {'step_name': 'step4',
@@ -158,7 +161,7 @@ def start(case_name, **kwargs):
                      'expect': 'connect ap R1_TC_5G_n success',
                      'actual': 'connect ap R1_TC_5G_n fail',
                      'note': 'null'}
-            cfn.update_cases_result(report_file, case_name, step4)
+            common_function.update_cases_result(report_file, case_name, step4)
 
             log.error("connect ap R1_TC_5G_n fail")
 
@@ -177,7 +180,14 @@ def start(case_name, **kwargs):
         return True
 
     else:
-        log.error("this not is a indonesia image, can't run this case")
+        steps = {'step_name': 'Check current os',
+                     'result': 'Fail',
+                     'expect': 'Current os is indo',
+                     'actual': 'current os is not indonesia.',
+                     'note': 'null'}
+        common_function.update_cases_result(report_file, case_name, steps)
+        # log.error("this not is a indonesia image, can't run this case")
+        log.info("this not is a indonesia image, skip this case")
         log.info("{:+^70}".format("this case test over"))
         sleep(1)
         return False

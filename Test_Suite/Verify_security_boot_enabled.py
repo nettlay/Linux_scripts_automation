@@ -1,9 +1,10 @@
 from Common import common_function
-from Common import report
+from Test_Script.ts_precheck import network_function
 import yaml
 import os
 import subprocess
 from Test_Script.ts_precheck.precheck_function import SwitchThinProMode
+from Common.tool import get_root_path
 
 
 class SecurityBoot:
@@ -11,13 +12,12 @@ class SecurityBoot:
         self.para = common_function.load_global_parameters()
         self.target_platform = self.para['platform']
         self.current_path = common_function.get_current_dir()
-        self.log = common_function.log()
+        self.log = common_function.log
         self.log.info("-" * 60)
         self.log.info("case name: Verify_security_boot_enabled")
 
     def security_boot_platform_list(self):
-        path = self.current_path + '/Test_Data/td_precheck/check_security_boot.yml'
-        # path = r'./Test_Data/check_security_boot.yml'
+        path = self.current_path + '/Test_Data/User_Defined_Data/td_precheck/check_security_boot.yml'
         data_lst = yaml.safe_load(open(path))
         return data_lst
 
@@ -46,12 +46,12 @@ class SecurityBoot:
     def check_security_boot(self, platform_type):
         platform_lst = self.security_boot_platform_list()
         current_platform = common_function.get_platform()
-        if not self.target_platform == current_platform:
-            print('Target platform is not match with current platform. Current is {}.'.format(current_platform))
+        if not current_platform:
+            return 'current platform is empty'
+        if not self.target_platform == current_platform.upper():
             self.log.info('Target platform is not match with current platform. Current is {}.'.format(current_platform))
             return 'platform mismatch'
         if self.target_platform not in platform_lst:
-            print('Skip checking security boot for target platform {}.'.format(self.target_platform))
             self.log.info('Skip checking security boot for target platform {}.'.format(self.target_platform))
             return 'skip checking'
         else:
@@ -65,19 +65,14 @@ class SecurityBoot:
                     element = element.strip()
                     if platform_type == 'DTC':
                         if '*Enable' in element:
-                            print('Security boot check PASS for platform {0}, it is {1}'.format(self.target_platform,
-                                                                                                element))
                             self.log.info('Security boot check PASS for platform {0}, it is {1}'.format(self.target_platform,
                                                                                                         element))
                             return True
                         elif '*Disable' in element:
-                            print('Security boot check Fail for platform {0}, it is {1}'.format(self.target_platform,
-                                                                                                element))
                             self.log.info('Security boot check Fail for platform {0}, it is {1}'.format(self.target_platform,
                                                                                                         element))
                             return '*Disable'
                         else:
-                            print('Invalid value {} for Security Boot.'.format(element))
                             self.log.info('Invalid value {} for Security Boot.'.format(element))
                             return 'invalid value for Security Boot'
                     elif platform_type == 'MTC':
@@ -101,7 +96,10 @@ class SecurityBoot:
 
 def start(case_name, **kwargs):
     SwitchThinProMode(switch_to='admin')
-    report1 = report.Report(case_name)
+    # report_file = network_function.system_ip() + '.yaml'
+    ip = common_function.check_ip_yaml()
+    report_file = get_root_path("Test_Report/{}.yaml".format(ip))
+    common_function.new_cases_result(report_file, case_name)  # new report
     security_boot = SecurityBoot()
     current_platform = common_function.get_platform()
     if current_platform[0] == 't':
@@ -109,13 +107,33 @@ def start(case_name, **kwargs):
     elif current_platform[0] == 'm':
         platform_type = 'MTC'
     else:
-        report1.reporter('Check platform type', 'Fail', 'DTC or MTC', 'invalid platform type', 'none')
-        report1.generate()
+        step1 = {'step_name': 'Check platform type',
+                 'result': 'Fail',
+                 'expect': 'DTC or MTC',
+                 'actual': 'invalid platform type',
+                 'note': 'none'}
+        common_function.update_cases_result(report_file, case_name, step1)
         return
     check_result = security_boot.check_security_boot(platform_type)
     if check_result is True:
-        report1.reporter('Check whether security boot enabled or not', 'Pass', 'Enable', 'Disable', 'none')
+        step2 = {'step_name': 'Check whether security boot enabled or not',
+                 'result': 'Pass',
+                 'expect': 'Enable',
+                 'actual': 'Disable',
+                 'note': 'none'}
+    elif check_result == 'skip checking':
+        step2 = {'step_name': 'Check whether security boot enabled or not',
+                 'result': 'Fail',
+                 'expect': 'Skip checking security boot',
+                 'actual': 'Skip checking security boot for platform {}'.format(security_boot.target_platform),
+                 'note': 'none'}
     else:
-        report1.reporter('Check whether security boot enabled or not', 'Fail', 'Enable', check_result, 'none')
-    report1.generate()
+        step2 = {'step_name': 'Check whether security boot enabled or not',
+                 'result': 'Fail',
+                 'expect': 'Enable',
+                 'actual': check_result,
+                 'note': 'none'}
+    common_function.update_cases_result(report_file, case_name, step2)
+
+
 

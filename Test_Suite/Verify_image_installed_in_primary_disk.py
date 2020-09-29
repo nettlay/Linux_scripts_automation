@@ -1,24 +1,22 @@
 from Common import common_function
-from Common import report
+from Test_Script.ts_precheck import network_function
 import Test_Script.ts_precheck.precheck_function as common_function_tp
 from Test_Script.ts_precheck import precheck_function
+from Common.tool import get_root_path
 
 
 class CheckStorage:
     def __init__(self):
         self.para = common_function.load_global_parameters()
-        # self.config_name = '{}_{}'.format(self.para['platform'], self.para['config'])
         self.platform = self.para['platform']
         self.config = self.para['config']
-        print('target platform: {}, target config: {}'.format(self.platform, self.config))
-
         self.storage = precheck_function.storage_info(self.platform, self.config)
         self.primary_card_label = ''
         self.primary_card_size_current = ''
         # self.primary_storage = self.storage[0]
         # self.primary_storage_size = ''
         # self.secondary_storage_size = ''
-        self.log = common_function.log()
+        self.log = common_function.log
         self.log.info("-" * 60)
         self.log.info("case name: Verify image installed in primary disk")
         self.log.info('target platform: {}, target config: {}'.format(self.platform, self.config))
@@ -40,25 +38,21 @@ class CheckStorage:
                 else:
                     continue
         else:
-            print('Failed to get size info from matrix for {} storage.'.format(pri_or_second))
             self.log.info('Failed to get size info from matrix for {} storage.'.format(pri_or_second))
 
     def check_image_in_primary_disk(self):
         primary_storage_size_matrix = self.get_size_matrix('primary')
-        print('primary storage size from matrix: {}'.format(primary_storage_size_matrix))
         self.log.info('primary storage size from matrix: {}'.format(primary_storage_size_matrix))
         self.primary_card_label = precheck_function.primary_card_label()
-        print('primary_card_label: {}'.format(self.primary_card_label))
         self.log.info('primary_card_label: {}'.format(self.primary_card_label))
         self.primary_card_size_current = precheck_function.card_size(self.primary_card_label)
-        print('primary_card_size_current with bytes: {}'.format(self.primary_card_size_current[1]))
         self.log.info('primary_card_size_current with bytes: {}'.format(self.primary_card_size_current[1]))
-        if self.primary_card_size_current[1][:-9] == primary_storage_size_matrix:
-            print('Image installed in primary disk {}.'.format(self.primary_card_label))
+        if not self.primary_card_size_current:
+            return 'fail to get current primary card size'
+        if abs(int(self.primary_card_size_current[1][:-9]) - int(primary_storage_size_matrix)) <= 2:
             self.log.info('Image installed in primary disk {}.'.format(self.primary_card_label))
             return True
         else:
-            print('Image is not installed in primary disk.')
             self.log.info('Image is not installed in primary disk.')
             return False
 
@@ -68,12 +62,9 @@ class CheckStorage:
         partition_size_unified = self.unified_size(partition_size)
         pri_size_GiB_unified = self.unified_size(pri_size_GiB)
         if partition_size_unified == pri_size_GiB_unified:
-            print('Disk is extended.')
             self.log.info('Disk is extended.')
             return True
         else:
-            print('Disk is not extended. Primary disk size is {0} GiB. Partition size is {1} GiB.'
-                  .format(pri_size_GiB, partition_size))
             self.log.info('Disk is not extended. Primary disk size is {0} GiB. Partition size is {1} GiB.'.
                           format(pri_size_GiB, partition_size))
             return False
@@ -85,30 +76,49 @@ class CheckStorage:
         if size:
             return size.split('.')[0]
         else:
-            print('Invalid size {}'.format(size))
             self.log.info('Invalid size {}'.format(size))
 
 
 def start(case_name, **kwargs):
     common_function_tp.SwitchThinProMode(switch_to='admin')
-    report1 = report.Report(case_name)
+    # report_file = network_function.system_ip() + '.yaml'
+    ip = common_function.check_ip_yaml()
+    report_file = get_root_path("Test_Report/{}.yaml".format(ip))
+    common_function.new_cases_result(report_file, case_name)  # new report
     check_storage = CheckStorage()
     primary_result = check_storage.check_image_in_primary_disk()
     if primary_result is True:
-        report1.reporter('Check whether image installed in primary disk', 'Pass', 'in primary disk', 'in primary disk',
-                         'none')
-    elif primary_result is False:
-        report1.reporter('Check whether image installed in primary disk', 'Fail', 'in primary disk', 'not in primary '
-                                                                                                     'disk', 'none')
+        step1 = {'step_name': 'Check whether image installed in primary disk',
+                 'result': 'Pass',
+                 'expect': 'in primary disk',
+                 'actual': 'in primary disk',
+                 'note': 'none'}
+    elif primary_result == 'fail to get current primary card size':
+        step1 = {'step_name': 'Check whether image installed in primary disk',
+                 'result': 'Fail',
+                 'expect': 'in primary disk',
+                 'actual': 'fail to get current primary card size',
+                 'note': 'none'}
     else:
-        pass
+        step1 = {'step_name': 'Check whether image installed in primary disk',
+                 'result': 'Fail',
+                 'expect': 'in primary disk',
+                 'actual': 'not in primary disk',
+                 'note': 'none'}
+    common_function.update_cases_result(report_file, case_name, step1)
     extended_result = check_storage.check_disk_extended()
     if extended_result is True:
-        report1.reporter('Check whether disk is extended', 'Pass', 'extended', 'extended', 'none')
-    elif extended_result is False:
-        report1.reporter('Check whether disk is extended', 'Fail', 'extended', 'not extended', 'none')
+        step2 = {'step_name': 'Check whether disk is extended',
+                 'result': 'Pass',
+                 'expect': 'extended',
+                 'actual': 'extended',
+                 'note': 'none'}
     else:
-        pass
-    report1.generate()
+        step2 = {'step_name': 'Check whether disk is extended',
+                 'result': 'Fail',
+                 'expect': 'extended',
+                 'actual': 'not extended',
+                 'note': 'none'}
+    common_function.update_cases_result(report_file, case_name, step2)
 
 
