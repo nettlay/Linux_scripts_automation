@@ -1,28 +1,29 @@
 import time, os, sys
 from pymouse import PyMouse
 from pykeyboard import PyKeyboard
-from pyautogui import screenshot
+os.environ['DISPLAY'] = ':0'
 from Common.common_function import *
-from Common.picture_operator import wait_element
+from Common.picture_operator import wait_element, capture_screen
+
 
 mouse = PyMouse()
 keyboard = PyKeyboard()
 
 
 def logFile(file, msg):
-    '''
+    """
     :param file:
     :param msg:
     :return:
-    '''
+    """
     with open(file, 'a') as f:
         f.write('[{}]:{}\n'.format(time.ctime(), msg))
 
 
 def getPlatform():
-    '''
+    """
     :return:  eg:Linux-5.3.6-hp-x86_64-with-ThinPro-7.1.0-None
-    '''
+    """
     return platform.platform()  # [0:10]
 
 
@@ -36,6 +37,15 @@ def press_key(key, wait=0.5):
     time.sleep(0.1)
     keyboard.release_key(key)
     time.sleep(wait)
+
+
+def press_hotkey(keys):
+    for key in keys:
+        keyboard.press_key(key)
+        time.sleep(0.02)
+    for key in keys:
+        keyboard.release_key(key)
+        time.sleep(0.02)
 
 
 def tap_key(key, wait=0.5):
@@ -52,6 +62,23 @@ def type_string(char_string, wait=0.5):
 
 def click(x, y, num=1):
     return mouse.click(x, y, n=num)
+
+
+def drag(loc, to):
+    mouse.press(*loc)
+    time.sleep(1)
+    mouse.move(*to)
+    time.sleep(1)
+    mouse.drag(*to)
+    return
+
+  
+def moveto(x, y):
+    return mouse.move(x, y)
+
+
+def right_click(x, y, n=1):
+    return mouse.click(x, y, button=2, n=n)
 
 
 def get_root_path(path=None, back=False):
@@ -102,7 +129,7 @@ def into_admin(back=False):
         path = get_root_path("Test_Report/img", back=back)
         if not os.path.exists(path):
             os.mkdir(path)
-        screenshot(get_root_path("Test_Report/img/error_admin.jpg", back=back))
+        capture_screen(get_root_path("Test_Report/img/error_admin.jpg", back=back))
     return
 
 
@@ -122,7 +149,7 @@ def global_switch_to_admin(loop=3, back=False):
     return False
 
 
-def events(testevent, params=None, callbacktest=None, cbparams=None, assertion=True, annotation=None):
+def events(testevent, params=None, callbacktest=None, cbparams=None, assertion=True, annotation=None, case_name='check_edocs_app'):
     """
     involve two test that if you want to execute some functions like a serious of events
     the method contains a event of logging yaml result
@@ -181,7 +208,7 @@ def events(testevent, params=None, callbacktest=None, cbparams=None, assertion=T
         path = get_root_path("Test_Report/img")
         if not os.path.exists(path):
             os.mkdir(path)
-        screenshot(get_root_path("Test_Report/img/{}.jpg".format(tname)))
+        capture_screen(get_root_path("Test_Report/img/{}.jpg".format(tname)))
         steps['result'] = "Fail"
         steps['actual'] = 'img/' + tname
         steps['note'] = notes
@@ -189,7 +216,7 @@ def events(testevent, params=None, callbacktest=None, cbparams=None, assertion=T
     finally:
         ip = get_ip()
         path = get_root_path("Test_Report/{}.yaml".format(ip))
-        update_cases_result(path, 'check_edocs_app', steps)
+        update_cases_result(path, case_name, steps)
     return True
 
 
@@ -197,5 +224,5 @@ if __name__ == '__main__':
     path = get_root_path("Test_Report/img")
     if not os.path.exists(path):
         os.mkdir(path)
-    screenshot(get_root_path("Test_Report/img/{}.jpg".format("name")))
+    capture_screen(get_root_path("Test_Report/img/{}.jpg".format("name")))
     print("")

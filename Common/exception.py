@@ -15,9 +15,9 @@ class AnalyzeNameError(Exception):
 
 
 class LogonError(Exception):
-    '''
+    """
         LogonError
-    '''
+    """
     pass
 
 
@@ -89,15 +89,53 @@ class DeleteVDIError(LogonError):
     def __str__(self):
         return self.s
 
-class LogoffError(Exception):
-    '''
-    LogoffError
-    '''
-    pass
 
-class GetuserError(LogoffError):
+class Continue(LogonError):
     def __init__(self, s=""):
         self.s = s
 
     def __str__(self):
         return self.s
+
+
+class LogoffError(Exception):
+    """
+    LogoffError
+    """
+
+
+class SocketError(LogoffError):
+    """
+    SocketError
+    """
+    def __init__(self, s=""):
+        self.s = s
+
+    def __str__(self):
+        return self.s
+
+
+class ConnectionRefused(LogoffError):
+    def __init__(self, s=""):
+        self.s = s
+
+    def __str__(self):
+        return self.s
+
+
+class LogoffTimeout(LogoffError):
+    def __init__(self, s=""):
+        self.s = s
+
+    def __str__(self):
+        return self.s
+
+
+class IconNotExistError(Exception):
+    def __init__(self, s=""):
+        self.s = s
+
+    def __str__(self):
+        return self.s
+
+

@@ -1,11 +1,12 @@
 import threading
 import socket
 import getpass
-import time
 import os
+from Common.log import log
 
 encoding = 'utf-8'
 BUFSIZE = 1024
+
 
 '''
 Socket server will be built to an executable file and put to ftp.
@@ -22,26 +23,34 @@ class Process(threading.Thread):
         while True:
             data = self.client_socket.recv(BUFSIZE)
             if not data:
-                print('No response. Close the client connection {0}.'.format(self.client_socket.getpeername()))
+                log.info('No response. Close the client connection {0}.'.format(self.client_socket.getpeername()))
                 # self.client_socket.sendall('No data received. Connection closed.'.encode(encoding))
                 # print('socket connection disconnect')
                 break
-            string = bytes.decode(data, encoding).strip()
-            print("Content from client: {}.".format(string))
-            if string.upper() == 'GET_USER':
+            string = bytes.decode(data, encoding)
+            log.info("Content from client: {}.".format(string))
+            string_list = string.split(':', 1)
+            if string_list[0].strip().upper() == 'SCRIPTS':
+                scripts = string_list[1].strip()
+                run_result = self.run_scripts(scripts)
+                if run_result is False:
+                    self.client_socket.sendall('run scripts fail'.encode(encoding))
+                elif len(run_result) > 0:
+                    result_str = '\n'.join(run_result)
+                    self.client_socket.sendall(result_str.encode(encoding))
+                else:
+                    self.client_socket.sendall('run scripts done with no return value'.encode(encoding))
+            elif string_list[0].strip().upper() == 'GET_USER':
                 user = self.get_user()
                 if user:
                     self.client_socket.sendall('{}'.format(user).encode(encoding))
                 else:
                     self.client_socket.sendall('get_user fail'.encode(encoding))
-            elif string.upper() == 'LOGOFF':
-                logoff = self.log_off()
-                if logoff:
-                    self.client_socket.sendall('logoff done'.encode(encoding))
-                else:
-                    self.client_socket.sendall('logoff fail'.encode(encoding))
+            elif string_list[0].strip().upper() == 'LOGOFF':
+                self.log_off()
+                # self.client_socket.sendall('logoff done'.encode(encoding))
             else:
-                print('Invalid message {}.'.format(string))
+                log.info('Invalid message {}.'.format(string))
                 break
         self.client_socket.close()
 
@@ -50,17 +59,28 @@ class Process(threading.Thread):
         try:
             user = getpass.getuser()
             return user
-        except Exception:
+        except Exception as e:
+            log.info(e)
             return False
 
     @staticmethod
     def log_off():
         try:
+            log.info('going to logoff')
             os.system("shutdown -l")
-            print('logoff')
-            time.sleep(5)
-            return True
-        except Exception:
+            # time.sleep(5)
+            # return True
+        except Exception as e:
+            log.info(e)
+            # return False
+
+    @staticmethod
+    def run_scripts(scripts):
+        try:
+            result = os.popen(scripts).readlines()
+            return result
+        except Exception as e:
+            log.info(e)
             return False
 
 
@@ -78,11 +98,11 @@ class Listener(threading.Thread):
         self.sock.listen(0)
 
     def run(self):
-        print("Socket server Listener started.")
+        log.info("Socket server Listener started.")
         while True:
             client_socket, client_addr = self.sock.accept()
             # print("Accept a connect from client {}.".format(client_addr[0]))
-            print("Accept a connect from client {}.".format(client_addr))
+            log.info("Accept a connect from client {}.".format(client_addr))
             client_socket.sendall('Hi, I got your request. We can start to communicate.'.encode(encoding))
             Process(client_socket).start()
 

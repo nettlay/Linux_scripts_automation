@@ -48,8 +48,12 @@ class FTPUtils:
         return save_as_dir
 
     def upload_file(self, file_name, save_as_name):
-        self.ftp.storbinary('STOR ' + save_as_name, open(file_name, 'rb'), self.upload_buffer)
-        return save_as_name
+        try:
+            self.ftp.storbinary('STOR ' + save_as_name, open(file_name, 'rb'), self.upload_buffer)
+            return save_as_name
+        except Exception as e:
+            print('Exception occurred when uploading file to FTP server path {}. Exception as below: \n\
+            {}'.format(save_as_name, e))
 
     def new_dir(self, dir_name):
         try:

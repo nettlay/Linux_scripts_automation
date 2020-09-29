@@ -1,14 +1,24 @@
 import datetime
-import logging
-import os
+import os, sys
+import time
 import platform
 import re
 import subprocess
-import sys
 import socket
 import copy
 import yaml
+import pyautogui
+import traceback
+import cv2
+import shutil
+import pymouse, pykeyboard
+from Common.file_transfer import FTPUtils
+from Common.file_operator import YamlOperator
+from Common.log import log, get_current_dir
 
+
+mouse = pymouse.PyMouse()
+kb = pykeyboard.PyKeyboard()
 if 'windows' in platform.platform().lower():
     __OS = 'Windows'
     import win32api
@@ -17,12 +27,12 @@ else:
     __OS = 'Linux'
 
 
-# Function author: Balance
-def get_current_dir():
-    if os.path.dirname(sys.argv[0]) == '':
-        return os.getcwd()
-    else:
-        return os.path.dirname(sys.argv[0])
+def export_profile():
+    os.popen('mclient export root {}'.format(get_current_dir('Test_Data', 'profile.xml')))
+
+
+def import_profile():
+    os.popen('mclient import {}'.format(get_current_dir('Test_Data', 'profile.xml')))
 
 
 def get_vdi_user():
@@ -33,34 +43,6 @@ def get_vdi_user():
 def now():
     now_time = datetime.datetime.today().strftime('%Y-%m-%d_%H-%M-%S')
     return now_time
-
-
-# Function author: Nick
-def log():
-    logger = logging.getLogger()
-    logger.setLevel(level=logging.INFO)
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    if not os.path.exists(os.path.join(get_current_dir(), 'Test_Report')):
-        os.makedirs(os.path.join(get_current_dir(), 'Test_Report', 'log'))
-    else:
-        if not os.path.exists(os.path.join(get_current_dir(), 'Test_Report', 'log')):
-            os.mkdir(os.path.join(get_current_dir(), 'Test_Report', 'log'))
-    log_name = now() + '.log'
-    file = os.path.join(get_current_dir(), 'Test_Report', 'log', log_name)
-    if not logger.handlers:
-        # StreamHandler
-        stream_handler = logging.StreamHandler(sys.stdout)
-        # stream_handler.setLevel(level=logging.ERROR)    # only show log.error message
-        stream_handler.setLevel(level=logging.INFO)  # show log.info and log.error message
-        stream_handler.setFormatter(formatter)
-        logger.addHandler(stream_handler)
-
-        # FileHandler
-        file_handler = logging.FileHandler(file, mode='a')
-        file_handler.setLevel(level=logging.INFO)
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
-    return logger
 
 
 # Function author: Nick
@@ -80,11 +62,12 @@ def get_ip():
         else:
             with os.popen("ifconfig") as f:
                 string = f.read()
-                eth0_ip = re.findall("eth0.*?addr.*?(\d+\.\d+\.\d+\.\d+).*?lo", string, re.S)
+                eth0_ip = re.findall("eth0.*?inet.*?(\d+\.\d+\.\d+\.\d+).*?lo", string, re.S)
                 if eth0_ip:
                     eth0_ip = eth0_ip[0]
                 else:
-                    eth0_ip = get_ip_from_yml()
+                    # eth0_ip = get_ip_from_yml()
+                    return
             return eth0_ip
     else:
         hostname = socket.gethostname()
@@ -93,7 +76,7 @@ def get_ip():
 
 
 def get_ip_from_yml():
-    report_path = os.path.join(get_current_dir(), 'Test_Report')
+    report_path = get_current_dir('Test_Report')
     files = os.walk(report_path)
     for file in files:
         if '.yaml' in file.lower():
@@ -102,11 +85,29 @@ def get_ip_from_yml():
     return 'null'
 
 
+# Function author: justin
+def check_ip_yaml():
+    ip_yaml_path = get_current_dir('Test_Data', 'ip.yml')
+    if os.path.exists(ip_yaml_path):
+        with open(ip_yaml_path, encoding='utf-8') as f:
+            ip = yaml.safe_load(f)
+            if ip:
+                return ip[0]
+            else:
+                return '127.0.0.1'
+    else:
+        f = open(ip_yaml_path, 'w')
+        f.close()
+        with open(ip_yaml_path, 'w', encoding='utf-8') as f:
+            yaml.dump([get_ip()], f, default_flow_style=False)
+        return get_ip()
+
+
 def get_platform():
     if __OS == 'Linux':
         platform = subprocess.getoutput('/usr/bin/hptc-hwsw-id --hw')
         if platform == '':
-            log().info('Platform is empty.')
+            log.info('Platform is empty.')
         return platform
     else:
         pass
@@ -119,7 +120,7 @@ def command_line(command):
 
 def load_global_parameters():
     # path = r'{}/Test_Data/additional.yml'.format(get_current_dir())
-    path = os.path.join(get_current_dir(), 'Test_Data', 'all_additional.yml')
+    path = os.path.join(get_current_dir(), 'Test_Data', 'additional.yml')
     data_dic = yaml.safe_load(open(path))
     return data_dic
 
@@ -166,13 +167,9 @@ def argv_filter(argv_list):
 
 
 def new_cases_result(file, case_name):
-    argvs = sys.argv
-    if argvs[1:]:
-        site, host_list, user, password, *params = argv_filter(argvs)
-        file = os.path.join(os.path.split(file)[0], "{}.yaml".format(site))
     result = [{'case_name': case_name,
-               'uut_name': get_ip(),
-               'result': 'Pass',
+               'uut_name': check_ip_yaml(),
+               'result': 'Fail',
                'steps': []
                }]
     if not os.path.exists(file):
@@ -192,19 +189,23 @@ def new_cases_result(file, case_name):
         yaml.safe_dump(current_report, f)
 
 
-def update_cases_result(file, case_name, steps):
-    argvs = sys.argv
-    if argvs[1:]:
-        site, host_list, user, password, *params = argv_filter(argvs)
-        file = os.path.join(os.path.split(file)[0], "{}.yaml".format(site))
+def update_cases_result(file, case_name, step):
     with open(file, 'r') as f:
         current_report = yaml.safe_load(f)
     for report in current_report:
         if report['case_name'] == case_name:
-            report['steps'].append(steps)
-            if steps['result'].upper() == 'FAIL':
+            report['steps'].append(step)
+            case_status = True
+            for sub_step in report['steps']:
+                if sub_step['result'].upper() == 'FAIL':
+                    case_status = False
+                    break
+            if case_status:
+                report['result'] = 'Pass'
+            else:
                 report['result'] = 'Fail'
             break
+
     with open(file, 'w') as f:
         yaml.safe_dump(current_report, f)
 
@@ -232,3 +233,597 @@ def switch_user(username="Admin", password="Admin", domain=""):
     win32api.RegSetValueEx(key, "DefaultPassWord", 0, win32con.REG_SZ, password)
     if domain != "":
         win32api.RegSetValueEx(key, "DefaultDomain", 0, win32con.REG_SZ, domain)
+
+
+def get_folder_items(path, **kwargs):
+    """
+    get folder items without recursion
+    :param path: str, path like './Test_Report' or '/root/PycharmProjects/linux_automation_script2/Common'
+    :return:
+    """
+    safe_mode = kwargs.get("safe_mode", True)
+    filter_name = kwargs.get("filter_name", "")
+    file_only = kwargs.get("file_only", False)
+    file_path = "/".join(os.path.realpath(path).split("\\"))
+    if not os.path.exists(file_path) and safe_mode:
+        os.makedirs(file_path)
+    file_list = os.listdir(file_path)
+    if filter_name:
+        filter_name_list = []
+        for i in file_list:
+            if filter_name.upper() in i.upper():
+                filter_name_list.append(i)
+        file_list = filter_name_list
+    if file_only:
+        for i in copy.deepcopy(file_list):
+            dir_path = file_path + "/{}".format(i)
+            if os.path.isdir(dir_path):
+                file_list.remove(i)
+    return file_list
+
+
+def get_folder_items_recursion(path, **kwargs):
+    file_list = get_folder_items(path, **kwargs)
+    all_file = []
+    for i in file_list:
+        new_path = os.path.join(path, i)
+        if "__pycache__" in new_path:
+            continue
+        elif os.path.isdir(new_path):
+            all_file = all_file + get_folder_items_recursion(new_path, **kwargs)
+        else:
+            all_file.append(i)
+    return all_file
+
+
+# Function author: justin
+def add_to_startup_script(i):
+    with open('/writable/root/auto_start_setup.sh', 'a') as s:
+        res = get_folder_items(get_current_dir(), file_only=True)
+        if i in res:
+            s.write("{}\n".format(get_current_dir() + '/' + i))
+        elif '/' in i:
+            s.write("{}\n".format(i))
+    time.sleep(0.2)
+    os.system("chmod 777 /writable/root/auto_start_setup.sh")
+    time.sleep(0.2)
+
+
+# Function author: justin
+def add_linux_script_startup(script_name):
+    if os.path.exists('/root/auto_start_setup.sh'):
+        os.remove('/root/auto_start_setup.sh')
+        # with open('/root/auto_start_setup.sh', 'r') as f:
+        #     sh_info = ''.join(f.readlines())
+        #     log.info(sh_info)
+        #     if type(script_name) == list and len(script_name) > 1:
+        #         for i in script_name:
+        #             if i in sh_info:
+        #                 continue
+        #             add_to_startup_script(i)
+        #     elif type(script_name) == list and len(script_name) == 1:
+        #         if script_name[0] not in sh_info:
+        #             add_to_startup_script(script_name[0])
+        #     else:
+        #         if script_name not in sh_info:
+        #             add_to_startup_script(script_name)
+    #     return True
+    # else:
+    cur_folder = get_current_dir().split('/')[-1]
+    # os.system('cp -r {} /root/'.format(get_current_dir()))
+    os.system("fsunlock")
+    time.sleep(0.2)
+    with open('/etc/init/auto-run-automation-script.conf', 'w+') as f:
+        f.write("start on lazy-start-40\nscript\n")
+        f.write("\t/writable/root/auto_start_setup.sh\nend script\n")
+    time.sleep(0.5)
+    os.system("chmod 777 /etc/init/auto-run-automation-script.conf")
+
+    os.system('fsunlock')
+    time.sleep(0.1)
+    with open('/writable/root/auto_start_setup.sh', 'w+') as s:
+        s.write("#! /bin/bash\n\nexec 2>/root/log.log\n")
+        s.write('export DISPLAY=:0\nfsunlock\ncd /root\n')
+        res = get_folder_items(get_current_dir(), file_only=True)
+        if type(script_name) == list:
+            for i in script_name:
+                if i in res:
+                    s.write("{}\n".format(os.path.join(get_current_dir(), i)))
+                elif '/' in i:
+                    s.write("{}\n".format(i))
+        else:
+            if script_name in res:
+                s.write("{}\n".format(os.path.join(get_current_dir(), script_name)))
+            elif '/' in script_name:
+                s.write("{}\n".format(script_name))
+    time.sleep(0.2)
+    os.system("chmod 777 /writable/root/auto_start_setup.sh")
+    time.sleep(0.2)
+    return False
+
+
+# Function author: justin
+def linux_rm_startup_script(name=''):
+    os.system("fsunlock")
+    time.sleep(0.2)
+    if name:
+        if type(name) == list:
+            for s in name:
+                batch_rm_startup_script(s)
+        else:
+            batch_rm_startup_script(name)
+    else:
+        os.system("rm /etc/init/auto-run-automation-script.conf")
+        os.system("rm /writable/root/auto_start_setup.sh")
+    time.sleep(0.1)
+
+
+# Function author: justin
+def batch_rm_startup_script(name):
+    if '/' in name:
+        with open('/root/auto_start_setup.sh', 'r') as f:
+            lis = f.readlines()
+            print(lis)
+            for i in lis:
+                if i.strip('\n').split('/') == name.split('/'):
+                    print(i.strip('\n').split('/'), name.split('/'))
+                    lis.remove(i)
+        with open('/root/auto_start_setup.sh', 'w') as f:
+            print(lis)
+            for i in lis:
+                f.write(i)
+    else:
+        os.system('sed -i "/{}/d" /root/auto_start_setup.sh'.format(name))
+
+
+def open_window(name):
+    log.info("start move mouse")
+    pyautogui.moveTo(100, 1)
+    time.sleep(1)
+    log.info("start send ctrl alt s")
+    pyautogui.hotkey('ctrl', 'alt', 's')
+    time.sleep(5)
+    log.info("start type {}".format(name))
+    pyautogui.typewrite(name)
+    time.sleep(2)
+    pyautogui.press('enter')
+    time.sleep(3)
+    log.info("end")
+
+
+def open_window_with_check(name, picture):
+    pyautogui.moveTo(1, 1)
+    time.sleep(1)
+    pyautogui.hotkey('ctrl', 'alt', 's')
+    time.sleep(2)
+    pyautogui.typewrite(name)
+    time.sleep(2)
+    pyautogui.press('enter')
+    if check_window("F", picture):
+        return True
+    else:
+        return False
+
+
+def close_window():
+    time.sleep(3)
+    pyautogui.hotkey('ctrl', 'alt', 'f4')
+
+
+def close_window_with_check(picture):
+    time.sleep(3)
+    pyautogui.hotkey('ctrl', 'alt', 'f4')
+    if check_window("T", picture):
+        return True
+    else:
+        return False
+
+
+def check_window(runflag, picture):
+    count = 0
+    time.sleep(3)
+    if runflag == "F":
+        while count <= 5:
+            system_window = pyautogui.locateOnScreen(picture)
+            print(system_window)
+            if system_window is not None:
+                log.info("window opens successfully")
+                return True
+            else:
+                log.info("window opens failed!")
+                count += 1
+                time.sleep(1)
+                if count == 6:
+                    return False
+    else:
+        while count <= 5:
+            system_window = pyautogui.locateOnScreen(picture)
+            print(system_window)
+            if system_window is None:
+                log.info("window closes successfully")
+                return True
+            else:
+                log.info("window closes failed!")
+                count += 1
+                if count == 6:
+                    return False
+
+
+def delete_folder(top):
+    import os
+    for root, dirs, files in os.walk(top, topdown=False):
+        for name in files:
+            os.remove(os.path.join(root, name))
+        for name in dirs:
+            os.rmdir(os.path.join(root, name))
+
+
+def show_desktop():
+    time.sleep(3)
+    pyautogui.hotkey('ctrl', 'alt', 'end')
+
+
+def logoff():
+    show_desktop()
+    time.sleep(1)
+    pyautogui.rightClick()
+    time.sleep(1)
+    pyautogui.hotkey("up")
+    time.sleep(1)
+    pyautogui.hotkey("enter")
+    time.sleep(1)
+    pyautogui.hotkey("enter")
+    time.sleep(1)
+    pyautogui.hotkey("enter")
+
+
+def reboot():
+    show_desktop()
+    time.sleep(1)
+    pyautogui.rightClick()
+    time.sleep(1)
+    pyautogui.hotkey("up")
+    time.sleep(1)
+    pyautogui.hotkey("enter")
+    time.sleep(1)
+    pyautogui.hotkey("down")
+    time.sleep(1)
+    pyautogui.hotkey("down")
+    time.sleep(1)
+    pyautogui.hotkey("enter")
+    time.sleep(1)
+    pyautogui.hotkey("enter")
+
+
+def get_position(img, region=None, similaity=0.97,base_dir = os.path.join(get_current_dir(), 'Test_Data', 'td_power_manager', 'AD')):
+    # img=os.path.join(os.getcwd(),"Test_Data","import_cert_and_lunch_firefox",img)
+    if base_dir:
+        img = os.path.join(base_dir, img)
+    # print(img)
+    count = 5
+    count1 = count
+    while count:
+        part_img = cv2.imread(img, 0)
+        w, h = part_img.shape[::-1]
+        if region is None:
+            pyautogui.screenshot().save("temp.png")
+            full_img = cv2.imread("temp.png", 0)
+            res = cv2.matchTemplate(part_img, full_img, cv2.TM_CCOEFF_NORMED)
+            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+            if max_val > similaity:
+                # print("find :" + img + " with similaity " + str(max_val) + " in full screen")
+                log.info("find :" + img + " with similaity " + str(max_val) + " in full screen")
+                return (max_loc[0], max_loc[1], w, h), (int(max_loc[0] + w / 2), int(max_loc[1] + h / 2))
+            else:
+                # print("Not find :" + img + " with similaity " + str(max_val) + "in region:" + str(region))
+                log.info("Not find :" + img + " with similaity " + str(max_val) + "in region:" + str(region))
+        else:
+            pyautogui.screenshot(region=region).save("temp.png")
+            full_img = cv2.imread("temp.png", 0)
+            res = cv2.matchTemplate(part_img, full_img, cv2.TM_CCOEFF_NORMED)
+            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+            if max_val > similaity:
+                # print("find :"+img+" with similaity "+str(max_val)+"in region:"+str(region))
+                log.info("find :" + img + " with similaity " + str(max_val) + "in region:" + str(region))
+                return (max_loc[0], max_loc[1], w, h), (int(max_loc[0] + w / 2), int(max_loc[1] + h / 2))
+            else:
+                # print("Not find :" + img + " with similaity " + str(max_val) + "in region:" + str(region))
+                log.info("Not find :" + img + " with similaity " + str(max_val) + "in region:" + str(region))
+
+        count = count - 1
+        # print("can not find :" + img + " :wait 1s repeat")
+        log.info("can not find :" + img + " :wait 1s repeat")
+    # print("can not find " + img + " in "+str(count1)+" repeats")
+    log.info("can not find " + img + " in " + str(count1) + " repeats")
+    return False
+
+
+class SwitchThinProMode:
+    """
+    switch thinpro to admin mode or user mode
+    SwitchThinProMode(switch_to='admin')
+    """
+
+    def __init__(self, switch_to, **kwargs):
+
+        self.switch_to = str(switch_to).lower()
+        self.password = kwargs.get("password", "1")
+        self.switch_mode()
+
+    @staticmethod
+    def current_mode():
+        s = os.path.exists('/var/run/hptc-admin')
+        if s:
+            return 'admin'
+        else:
+            return 'user'
+
+    @staticmethod
+    def judge_has_root_pw():
+        s = subprocess.call("hptc-passwd-default --root --check >/dev/null 2>&1", shell=True)
+        if s:
+            return True
+        else:
+            return False
+
+    def switch_mode(self):
+        if self.switch_to == 'user':
+            if self.current_mode() == 'user':
+                log.info("now is user mode")
+                return True
+            if self.current_mode() == 'admin':
+                os.popen('hptc-switch-admin')
+                time.sleep(2)
+                if self.current_mode() == 'user':
+                    log.info("switch to user mode success")
+                    return True
+                else:
+                    log.error("switch to user mode fail")
+                    return False
+
+        if self.switch_to == 'admin':
+            if self.current_mode() == 'admin':
+                log.info("now is admin mode")
+                return True
+            if self.current_mode() == 'user':
+                if self.judge_has_root_pw():
+                    os.popen('hptc-switch-admin')
+                    time.sleep(2)
+                    kb.type_string(self.password)
+                    time.sleep(1)
+                    kb.tap_key(kb.enter_key)
+                    time.sleep(1)
+                    if self.current_mode() == 'admin':
+                        log.info("switch to admin mode success")
+                        return True
+                    else:
+                        kb.tap_key(kb.enter_key)
+                        time.sleep(1)
+                        kb.type_string('root')
+                        time.sleep(1)
+                        kb.tap_key(kb.tab_key)
+                        time.sleep(1)
+                        kb.type_string(self.password)
+                        time.sleep(1)
+                        kb.tap_key(kb.enter_key)
+                        time.sleep(1)
+                        if self.current_mode() == 'admin':
+                            log.info("switch to admin mode success")
+                            return True
+                        else:
+                            log.info("switch to admin mode fail")
+                            return False
+
+                if not self.judge_has_root_pw():
+                    os.popen('hptc-switch-admin')
+                    time.sleep(2)
+                    kb.type_string(self.password)
+                    time.sleep(1)
+                    kb.tap_key(kb.tab_key)
+                    time.sleep(1)
+                    kb.type_string(self.password)
+                    time.sleep(1)
+                    kb.tap_key(kb.enter_key)
+                    time.sleep(2)
+                    if self.current_mode() == 'admin':
+                        log.info("switch to admin mode success")
+                        return True
+                    else:
+                        log.error("switch to admin mode fail")
+                        return False
+
+
+def screen_resolution():
+    return pyautogui.size()
+
+
+def case_steps_run_control(steps_list, name, *args, **kwargs):
+    case_steps_file = os.path.join(get_current_dir(), "{}_case_steps.yml".format(name))
+    if not os.path.exists(case_steps_file):
+        list_dict = {}
+        for s in steps_list:
+            list_dict[s] = "norun"
+        steps_yml = YamlOperator(case_steps_file)
+        steps_yml.write(list_dict)
+
+    steps_yml = YamlOperator(case_steps_file)
+    for step in steps_list:
+        steps_dict = steps_yml.read()
+        for key, value in steps_dict.items():
+            if step == key and value.lower() != "finished":
+                steps_dict[key] = "finished"
+                steps_yml.write(steps_dict)
+                result = getattr(sys.modules[name], step)(*args, **kwargs)
+                # result = eval(key)
+                if result is False:
+                    os.remove(case_steps_file)
+                    return False
+        if steps_list.index(step) == len(steps_list) - 1:
+            os.remove(case_steps_file)
+            return True
+
+
+def load_data_from_ftp():
+    file_obj = YamlOperator(get_current_dir('Test_Data', 'td_common', 'global_config.yml'))
+    content = file_obj.read()
+    ftp_server = content['td_ftp']['server']
+    ftp_user = content['td_ftp']['username']
+    ftp_passwd = content['td_ftp']['password']
+    td_path = content['td_ftp']['td_path']
+    try:
+        ftp = FTPUtils(ftp_server, ftp_user, ftp_passwd)
+        ftp.change_dir(td_path)
+        folders = ftp.get_item_list('')
+        for folder in folders:
+            if not ftp.is_item_file(folder):
+                ftp.download_dir(folder, get_current_dir(folder))
+        ftp.close()
+    except:
+        log.error('ftp exception:\n{}'.format(traceback.format_exc()))
+
+
+def prepare_for_framework():
+    file_path = get_current_dir('Test_Data', 'additional.yml')
+    file_obj = YamlOperator(file_path)
+    content = file_obj.read()
+    site = content.get('AutoDash_Site')
+    if site:
+        return
+    else:
+        user_defined_data = get_current_dir('Test_Data', 'User_Defined_Data')
+        if os.path.exists(user_defined_data):
+            log.info('removing {}'.format(user_defined_data))
+            shutil.rmtree(user_defined_data)
+            time.sleep(3)
+        for k, v in content.items():
+            if 'User_Defined_Data'.upper() in str(k).upper():
+                log.info('will download user data')
+                break
+        else:
+            log.info('no uer defined data to be download')
+            return
+        file = get_current_dir('Test_Data', 'ftp_config.yaml')
+        fo = YamlOperator(file)
+        ftp_para = fo.read()
+        for k, v in content.items():
+            if 'User_Defined_Data'.upper() in str(k).upper():
+                source = str(v)
+                linux_path = source.replace('\\', '/')
+                host = linux_path.split('/')[2]
+                for each in ftp_para:
+                    ip = each.get('ip')
+                    user = each.get('user')
+                    password = each.get('password')
+                    if ip == host:
+                        break
+                else:
+                    log.info('ftp_config.yaml has no parameters for {}'.format(host))
+                    continue
+                log.info('download user data from {} to UUT'.format(host))
+                last_level_folder = os.path.split(linux_path)[1]
+                folder_path = '/'.join(linux_path.split('/')[3:])
+                if last_level_folder.upper() in ['USER_DEFINED_DATA']:
+                    dst = get_current_dir('Test_Data', last_level_folder)
+                else:
+                    dst = get_current_dir('Test_Data', 'User_Defined_Data', last_level_folder)
+                n = 0
+                while True:
+                    try:
+                        log.info('download {} to {}'.format(source, dst))
+                        ftp = FTPUtils(host, user, password)
+                        ftp.download_dir(folder_path, dst)
+                        break
+                    except:
+                        if n > 30:
+                            log.info(traceback.format_exc())
+                            break
+                        else:
+                            n += 5
+                            time.sleep(5)
+
+
+class Run_App():
+    def __init__(self, path, shell=False):
+        self.app_path = path
+        self.instance: subprocess.Popen = None
+        self.shell = shell
+
+    def start(self):
+        self.instance = subprocess.Popen(self.app_path, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                         shell=self.shell)
+        time.sleep(2)
+
+    def check_status(self):
+        if self.check_instance():
+            if self.instance.poll() is None:
+                log.info("instance is running")
+                return True
+            else:
+                log.info("instance have end")
+                return False
+
+    def stop(self):
+        if self.check_instance():
+            if self.app_path == "gpedit.msc":
+                subprocess.Popen('taskkill /im "mmc.exe" /f')
+                return
+            if self.app_path == "osk.exe":
+                subprocess.Popen('taskkill /im "osk.exe" /f')
+                return
+            if self.app_path == "C:\Windows\system32\mstsc.exe":
+                subprocess.Popen('taskkill /im "mstsc.exe" /f')
+                return
+            self.instance.terminate()
+
+    def get_stdout(self):
+        if self.check_instance():
+            return self.instance.stdout.read()
+
+    def get_error(self):
+        if self.check_instance():
+            return self.instance.stderr.read()
+
+    def wait(self):
+        if self.check_instance():
+            self.instance.wait()
+
+    def get_pid(self):
+        if self.check_instance():
+            return self.instance.pid
+
+    def check_instance(self):
+        if self.instance:
+            log.info("instance exist")
+            return True
+        else:
+            log.info("instance is None")
+            return False
+
+
+def import_cert(cert="ROOTCA.pem"):
+    time.sleep(1)
+    log.info("start import certificate")
+    rootca_pem_1 = os.path.exists("/etc/ssl/certs/ROOTCA.pem")
+    if rootca_pem_1:
+        log.info("certificate is already exist")
+        return True
+    else:
+        log.info("certificate not exist, start install cert")
+        shutil.copy(os.path.join(get_current_dir(), 'Test_Utility', 'ROOTCA.pem'),
+                    '/usr/local/share/ca-certificates/ROOTCA.pem')
+        time.sleep(0.2)
+        c = os.path.exists("/usr/local/share/ca-certificates/{}".format(cert))
+        if not c:
+            log.error('copy cert fail')
+            return False
+        log.info('copy cert success')
+        subprocess.getstatusoutput("/usr/bin/hptc-cert-mgr --apply")
+        time.sleep(4)
+        rootca_pem_2 = os.path.exists("/etc/ssl/certs/ROOTCA.pem")
+        if not rootca_pem_2:
+            log.error('install certificates fail')
+            return False
+        else:
+            log.info('install certificates success')
+            time.sleep(1)
+            return True

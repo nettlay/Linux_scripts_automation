@@ -46,3 +46,8 @@ class YamlOperator:
     def read(self):
         f = open(self.file_path, 'r')
         return yaml.safe_load(f)
+
+    def write(self, content):
+        with open(self.file_path, 'w')as f1:
+            yaml.safe_dump(content, f1)
+

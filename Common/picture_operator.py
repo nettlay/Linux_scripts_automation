@@ -1,82 +1,119 @@
 import os
 from numba import jit
-import subprocess
-import sys
 import time
 import cv2
 import math
 import shutil
-from pyautogui import screenshot
-import platform
+from mss import mss, tools
+from Common.common_function import get_folder_items, get_current_dir
 
 
-def get_position_by_pic(name, offset=(10, 10)):
+def capture_screen(file_name):
+    dir_path = os.path.dirname(file_name)
+    if dir_path and not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+    with mss() as capture:
+        capture.shot(mon=-1, output=file_name)
+    return file_name
+
+
+def capture_screen_by_loc(file_path, loc_dic):
+    # loc = {"left": 0, "top": 0, "width": 100, "height": 100}
+    with mss() as capture:
+        img = capture.grab(monitor=loc_dic)
+        tools.to_png(img.rgb, img.size, output=file_path)
+
+
+def get_position_by_pic(name, offset=(10, 10), **kwargs):
     """
     It's a normal function to get a location
     :param name: picture path+name
     :param offset: diy a point
     :return: tuple,such as (12,12)
     """
+    if isinstance(name, str) and os.path.isdir(name):
+        pic_list = get_folder_items(name, file_only=True)
+        assert pic_list, "pic is not exist in {}".format(name)
+        pic_path_list = list(map(lambda x: name + "/{}".format(x), pic_list))
+        name = pic_path_list
     if isinstance(name, list):
         time.sleep(0.5)
-        return get_icon_by_pictures(name, offset)
+        return get_icon_by_pictures(name, offset, **kwargs)
     else:
         time.sleep(0.5)
-        return get_icon_by_pic(name, offset)
+        return get_icon_by_pic(name, offset, **kwargs)
 
 
-def get_icon_by_pictures(name, offset=(10, 10)):
+def get_icon_by_pictures(name, offset=(10, 10), **kwargs):
     """
     sometimes you have several similar pic,but only
     one picture location will be located
     """
+    rate = kwargs.get("rate", 0.9)
     for pic in name:
-        screenshot('demo.png')
+        capture_screen('demo.png')
         img_name = cv2.imread(pic)
         t = cv2.matchTemplate(cv2.imread('demo.png'), img_name, cv2.TM_CCOEFF_NORMED)
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(t)
 
-        if max_val > 0.9:
+        if max_val > rate:
             x = max_loc[0]
             y = max_loc[1]
-            os.remove('demo.png')
+            # os.remove('demo.png')
             return (x + offset[0], y + offset[1]), img_name.shape
         else:
+            path = get_current_dir("Test_Data/temp_log.txt")
+            with open(path, "a+") as f:
+                f.write("{} {}".format(max_val, pic))
             continue
     return None
 
 
-def get_icon_by_pic(name, offset=(10, 10)):
+def get_icon_by_pic(name, offset=(10, 10), **kwargs):
     """
     find a location in a picture by name
     :param name: path+name
     :param offset: diy a point
     :return: (offset:(x,y),shape:(y,x,3))
     """
-    screenshot('demo.png')
+    rate = kwargs.get("rate", 0.9)
+    capture_screen('demo.png')
     img_name = cv2.imread(name)
     t = cv2.matchTemplate(cv2.imread("demo.png"), img_name,
                           cv2.TM_CCOEFF_NORMED)
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(t)
-    if max_val > 0.9:
+    if max_val > rate:
         x = max_loc[0]
         y = max_loc[1]
-        os.remove('demo.png')
+        # os.remove('demo.png')
         return (x + offset[0], y + offset[1]), img_name.shape
     else:
+        path = get_current_dir("Test_Data/temp_log.txt")
+        with open(path, "a+") as f:
+            f.write("{} {}".format(max_val, name))
         return None
 
 
-def wait_element(name, cycle=3, offset=(10, 10)):
+def compare_pic_similarity(img, tmp):
+    img_name = cv2.imread(img)
+    img_tmp = cv2.imread(tmp)
+    t = cv2.matchTemplate(img_name, img_tmp, cv2.TM_CCOEFF_NORMED)
+    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(t)
+    if max_val > 0.9:
+        return max_loc, img_name.shape
+    return False
+
+
+def wait_element(name, cycle=3, offset=(10, 10), **kwargs):
     """
     wait a result by looping
+    :param offset:
     :param name: path list or a path which you want to locate a point
     :param cycle: loop number
-    :param rs:(offset,shape)
     :return:
     """
     for i in range(cycle):
-        rs = get_position_by_pic(name, offset)
+        rs = get_position_by_pic(name, offset, **kwargs)
         if not rs:
             time.sleep(1)
             continue
@@ -86,6 +123,9 @@ def wait_element(name, cycle=3, offset=(10, 10)):
 
 
 def save_from_data(filename, data):
+    dir_path = os.path.dirname(filename)
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
     cv2.imwrite(filename, data)
 
 
@@ -107,11 +147,11 @@ def compare_picture_auto_collect(screenshot_file, template_file):
 
     if not os.path.exists(template_file):
         print("can not find template file:{} ,create a new one".format(template_file))
-        dirs=os.path.dirname(template_file)
+        dirs = os.path.dirname(template_file)
         if not os.path.exists(dirs):
             os.makedirs(dirs)
-        shutil.copyfile(screenshot_file,template_file)
-    return compare_picture(screenshot_file,template_file)
+        shutil.copyfile(screenshot_file, template_file)
+    return compare_picture_list(screenshot_file, template_file)
 
 
 @jit()
@@ -122,7 +162,7 @@ def collect_diff_counts(width, height, source, template):
     diff_count = 0
     for i in range(width):
         for j in range(height):
-            if compare_pixel(source[i][j], template[i][j]) > 3:
+            if compare_pixel(source[i][j], template[i][j]) > 25:
                 diff_count += 1
                 source[i][j] = [0, 0, 255]
                 continue
@@ -135,13 +175,46 @@ def compare_picture(source_file, dest_file):
     w, h = source.shape[0], source.shape[1]
 
     if source.shape != dest.shape:
-        return 0.1
+        return 0.1, []
     else:
-        if 'linux' in platform.platform().lower():
-            return 0.99
+        # if 'linux' in platform.platform().lower():
+        #     return 0.99
+        # else:
+        diff_count, diff_res = collect_diff_counts(w, h, source, dest)
+        return 1 - diff_count / (w * h), diff_res
+
+
+def compare_picture_list(source_file, dest_file):
+    source = cv2.imread(source_file)
+    dest = cv2.imread(dest_file)
+    w, h = source.shape[0], source.shape[1]
+    rs = 0, []
+    if source.shape != dest.shape:
+        rs = 0.1, []
+    else:
+        diff_count, diff_res = collect_diff_counts(w, h, source, dest)
+        rs = 1 - diff_count / (w * h), diff_res
+        if rs[0] > 0.99:
+            return rs
+    # check backup picture
+    dest_file = os.path.split(dest_file)
+    file_name, extend = dest_file[1].split('.')
+    for i in range(5):
+        join_name = os.path.join(dest_file[0], '{}_{}.{}'.format(file_name, i, extend))
+        source = cv2.imread(source_file)
+        dest = cv2.imread(join_name)
+        w, h = source.shape[0], source.shape[1]
+        if not os.path.exists(join_name):
+            continue
+        if source.shape != dest.shape:
+            continue
         else:
             diff_count, diff_res = collect_diff_counts(w, h, source, dest)
-        return 1 - diff_count/(w * h), diff_res
+            rs = 1 - diff_count / (w * h), diff_res
+            print(rs[0])
+            if rs[0] > 0.99:
+                return rs
+    return rs
 
 
 @jit()
@@ -152,27 +225,11 @@ def compare_pixel(rgb1, rgb2):
     return math.sqrt(r * r + g * g + b * b)
 
 
-def capture_screen(file_name):
-    if os.path.dirname(sys.argv[0]) == "":
-        cwd = os.getcwd()
-    else:
-        cwd = os.path.dirname(sys.argv[0])
-    if 'linux' in platform.platform().lower():
-        screenshot(imageFilename=file_name)
-        return file_name
-    elif 'windows' in platform.platform().lower():
-        subprocess.run('{} {}'.format(os.path.join(cwd, r"Test_Utility\screenshot.exe"), file_name), shell=True)
-        return file_name
-    else:
-        print('Capture not ready for os')
-        return False
-
-
 if __name__ == '__main__':
-    my_screenshot_file=r"Z:\WorkSpace3\wes_automation_script\temp.png"
-    my_template_file=r"Z:\WorkSpace3\wes_automation_script\win10_p1.jpg"
+    my_screenshot_file = r"Z:\WorkSpace3\wes_automation_script\temp.png"
+    my_template_file = r"Z:\WorkSpace3\wes_automation_script\win10_p1.jpg"
     try:
-        my_res=compare_picture_auto_collect(my_screenshot_file,my_template_file)
+        my_res = compare_picture_auto_collect(my_screenshot_file, my_template_file)
         print(my_res)
     except Exception as e:
         print(e.args)

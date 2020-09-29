@@ -29,23 +29,15 @@ class Report:
     def reporter(self, step_name='', result='', expect='', actual='', note=''):
         if result.upper() == "FAIL":
             self.result = "FAIL"
-        dic = {}  # The dic of one step
-        dic["step_name"] = step_name
-        dic["result"] = result
-        dic["expect"] = expect
-        dic["actual"] = actual
-        dic["note"] = note
+        dic = {"step_name": step_name, "result": result, "expect": expect, "actual": actual,
+               "note": note}  # The dic of one step
         self.steps_value_list.append(dic)
         return self.steps_value_list
 
     def generate(self):
         report_data = []
-
-        case_dic = {}  # The data of one case.
-        case_dic["case_name"] = self.case_name
-        case_dic["result"] = self.result
-        case_dic["steps"] = self.steps_value_list
-        case_dic["uut_name"] = self.uut_name
+        case_dic = {"case_name": self.case_name, "result": self.result, "steps": self.steps_value_list,
+                    "uut_name": self.uut_name}  # The data of one case.
         report_data.append(case_dic)
 
         if not os.path.exists(self.report_path):
