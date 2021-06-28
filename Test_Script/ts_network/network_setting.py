@@ -661,16 +661,18 @@ class Wireless(NetworkCommon):
             log.info("delete '{}' wireless ".format(ssid))
             if wait_element(self.pic("_{}".format(ssid))):
                 pyautogui.click(wait_element(self.pic("_{}".format(ssid)))[0], interval=2)
-                pyautogui.click(wait_element(self.pic("_delete"))[0], interval=2)
-                pyautogui.click(wait_element(self.pic("_yes"))[0], interval=2)
+                pyautogui.press(keys='tab', presses=3)
+                pyautogui.press(keys='space')
+                pyautogui.press(keys='space')
             else:
                 down_menu = wait_element(self.pic("_down_menu"))
                 if down_menu:
                     tool.click(down_menu[0][0], down_menu[0][1], num=10)
                     if wait_element(self.pic("_{}".format(ssid))):
                         pyautogui.click(wait_element(self.pic("_{}".format(ssid)))[0], interval=2)
-                        pyautogui.click(wait_element(self.pic("_delete"))[0], interval=2)
-                        pyautogui.click(wait_element(self.pic("_yes"))[0], interval=2)
+                        pyautogui.press(keys='tab', presses=3)
+                        pyautogui.press(keys='space')
+                        pyautogui.press(keys='space')
                     else:
                         log.info('{} wireless not exists'.format(ssid))
                         return False
