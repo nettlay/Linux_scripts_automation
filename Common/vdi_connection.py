@@ -20,12 +20,37 @@ import functools
 from Test_Data.td_multiple_display.settings import *
 import pymouse
 import pyautogui
+pyautogui.FAILSAFE = False
 
-config = os.path.join(cf.get_current_dir(), 'Test_Data', 'td_common', 'vdi_server_config.yml')
+config = cf.get_current_dir('Test_Data', 'td_common', 'vdi_server_config.yml')
 with open(config, 'r') as f:
     vdi_config = yaml.safe_load(f)
 mouse = pymouse.PyMouse()
 log=Logger()
+
+
+def query_item_id(item):
+    """
+    return a item(such as xen, freerdp...) id list queried by mclient
+    :return: ['{05065368-9f7b-42c5-be2c-89a40ce0a78c}']
+    """
+    item_list = subprocess.getoutput("mclient --quiet get root/ConnectionType/{}/connections".format(item)).splitlines()
+    id_dict = {item: []}
+    for i in item_list:
+        id_dict[item].append(i.split('/')[-1])
+    return id_dict
+
+
+def hide_desktop_icon(id_dict: dict):
+    """
+    params: id_dict: {"xen": ['{05065368-9f7b-42c5-be2c-89a40ce0a78c}', ],
+                      "freerdp": ['{05065368-9f7b-42c5-be2c-89a40ce0a78d}']
+                      }
+    """
+    for k, v in id_dict.items():
+        for i in v:
+            os.system("mclient --quiet set root/ConnectionType/{}/connections/{}/hasDesktopIcon 0".format(k, i))
+    os.system("mclient commit")
 
 
 def white_list_filter():
@@ -76,11 +101,113 @@ def check_user():
                     print(self.user, self.domain_list)
                     return func(*args, **kwargs)
                 else:
+                    log.error("error in check user method user: {}  domain_list: {}".format(self.user, str(self.domain_list)))
                     return "Continue"
 
         return wrapper
 
     return decorator
+
+
+class MultiUserManger:
+    def __init__(self):
+        self.download_base_file = 'download_temp.yml'
+        self.file_path = get_current_dir("Test_Data/common/{}".format(self.download_base_file))
+        self.config_base_file = get_current_dir('Test_Data/common/multi_user.yml')
+
+    @property
+    def config_args(self):
+        yaml_obj = YamlOperator(self.config_base_file)
+        content = yaml_obj.read()
+        return content
+
+    def remote_base_file(self, path):
+        path = self.config_args[path]
+        tree = path.split('/')
+        remote_file = '/'.join(tree[4:])
+        return remote_file
+
+    @property
+    def ftp(self):
+        ip = self.config_args['ip']
+        user = self.config_args['user']
+        pwd = self.config_args['pwd']
+        ftp_obj = FTPUtils(ip, user, pwd)
+        return ftp_obj
+
+    def create_file(self):
+        log.info('create a time.txt file and upload to ftp server')
+        path = get_current_dir('time.txt')
+        with open(path, 'w+') as f:
+            print('success')
+        self.ftp.upload_file(path, self.remote_base_file('path1'))
+
+    def get_a_available_key(self, key="user"):
+        for _ in range(10):
+            item_list = self.ftp.get_item_list(r'Files/multiple_display')
+            if 'time.txt' not in item_list:
+                self.create_file()
+                break
+            log.info('The user list file is occupied, wait ...')
+            time.sleep(2)
+        else:
+            log.warning('user_list.yml has been occupied, can not get a available user')
+            return ''
+        self.ftp.download_file(self.remote_base_file('path'), self.file_path)
+        time.sleep(2)
+        yaml_obj = YamlOperator(self.file_path)
+        total_users = yaml_obj.read().get(key, {})
+        for k, v in total_users.items():
+            if v in 'available':
+                dic_key = k
+                break
+        else:
+            dic_key = ''
+        if dic_key:
+            self.lock_key(dic_key, key)
+        else:
+            print('no available user could be assigned')
+        self.ftp.delete_file('Files/multiple_display/time.txt')
+        if os.path.exists(get_current_dir('time.txt')):
+            os.remove(get_current_dir('time.txt'))
+        return dic_key
+
+    def change_key_state(self, user_name, state, key="user"):
+        self.ftp.download_file(self.remote_base_file('path'), self.file_path)
+        time.sleep(2)
+        yaml_obj = YamlOperator(self.file_path)
+        total_users = yaml_obj.read()
+        value = total_users.get(key).get(user_name)
+        if value:
+            total_users[key][user_name] = state
+            yaml_obj.write(total_users)
+            self.ftp.upload_file(self.file_path, self.remote_base_file('path'))
+        else:
+            print('invalid user')
+
+    def get_key_dict(self, key="user"):
+        self.ftp.download_file(self.remote_base_file('path'), self.file_path)
+        time.sleep(2)
+        yaml_obj = YamlOperator(self.file_path).read()
+        return yaml_obj.get(key, {})
+
+    def reset_key(self, user_name, key="user"):
+        for _ in range(10):
+            item_list = self.ftp.get_item_list(r'Files/multiple_display')
+            if 'time.txt' not in item_list:
+                self.create_file()
+                break
+            log.info('The user list file is occupied, wait ...')
+            time.sleep(2)
+        else:
+            log.warning('user_list.yml has been occupied, can not reset user: {}'.format(user_name))
+        self.change_key_state(user_name, 'available', key)
+        self.ftp.delete_file('Files/multiple_display/time.txt')
+        if os.path.exists(get_current_dir('time.txt')):
+            os.remove(get_current_dir('time.txt'))
+
+    def lock_key(self, user_name, key="user"):
+        self.change_key_state(user_name, 'busy', key)
 
 
 class VDIConnection:
@@ -96,8 +223,9 @@ class VDIConnection:
         self.flag = False
         self.domain_list = []
         self.settings = None
-        self.set_dic = None
         self.registry_file = os.path.join(cf.get_current_dir(), "Test_Data", "td_common", "thinpro_registry.yml")
+        self.user_manager = MultiUserManger()
+        self.id = ""
 
     def import_cert(self):
         if cf.import_cert(cert=self.cert):
@@ -240,7 +368,7 @@ class VDIConnection:
 
     def check_logon(self):
         log.info("checking logon {} desktop".format(self.vdi))
-        time.sleep(100)
+        time.sleep(160)
         res = subprocess.getoutput("wmctrl -lx | grep -i '{}'".format(self.grep))
         windows = self.get_windows()
         if res:
@@ -255,19 +383,43 @@ class VDIConnection:
             return False
         return True
 
+    def connect_vdi_by_pic(self):
+        pth = get_current_dir("Test_Data/td_vdi/vdi_pic/{}".format(self.vdi))
+        res = wait_element(pth)
+        if not res:
+            log.error('picture {} match fail'.format(pth))
+            return False
+        offset, shape = res
+        print(offset, shape)
+        # mouse.click(offset[0] + int(shape[1] / 2), offset[1] + int(shape[0] / 2), n=3)
+        pyautogui.click(offset[0] + int(shape[1] / 2), offset[1] + int(shape[0] / 2), interval=0.1, clicks=3)
+        return True
+
     def logon(self, session):
         VDIConnection.delete_vdi(self.vdi)
         VDIConnection.create_vdi(self.vdi)
         connection_id_list = VDIConnection.vdi_connection_id(self.vdi)
         if len(connection_id_list) == 1:
-            log.info("start launching {}".format(connection_id_list[0]))
-            # self.set_vdi(connection_id_list[0], self.set_dic)
+            self.id = connection_id_list[0]
+            log.info("start launching {}".format(self.id))
+            ## self.set_vdi(connection_id_list[0], self.set_dic)
             self.set_vdi_from_yml(connection_id_list[0], settings=self.settings, set_dic=self.set_dic)
-            self.connect_vdi(connection_id_list[0])
+            # self.connect_vdi(connection_id_list[0])
+            self.connect_vdi_by_pic()
         elif len(connection_id_list) > 1:
             raise DeleteVDIError
         else:
             raise CreateVDIError
+        time.sleep(20)
+        x, y = mouse.position()
+        print(x, y)
+        if x >= y > 200:
+            mouse.move(x - 20, y - 20)
+        elif 200 > x >= y:
+            mouse.move(x + 20, y + 20)
+        else:
+            mouse.move(250, 250)
+        print(mouse.position())
         return self.check_logon()
 
     @staticmethod
@@ -277,11 +429,14 @@ class VDIConnection:
         capture_screen(name)
 
     def logoff(self):
-        ip_list = self.domains_to_ip_list(self.domain_list)
-        log.info("connecting to socket")
+        log.info("connecting to socket an wait 30")
         time.sleep(30)
         try:
-            for ip in ip_list:
+            host_dict = self.user_manager.get_key_dict("hostname")
+            for domain in self.domain_list:
+                ip = host_dict.get(domain.upper(), "")
+                if not ip:
+                    continue
                 soc = VDIConnection.generate_socket(ip, 9011)
                 time.sleep(1)
                 res = soc.request("get_user")
@@ -301,6 +456,9 @@ class VDIConnection:
             elif windows:
                 raise LogoffTimeout("Timeout {} seconds".format(t))
         except LogoffError:
+            if self.vdi in ["Selfservice"]:
+                os.system("/usr/bin/xen-logoff {}".format(self.id))
+                time.sleep(2)
             traceback.print_exc()
             windows = self.get_windows()
             log.info("try to close all {} windows".format(self.vdi))
@@ -426,7 +584,8 @@ class CitrixLinux(VDIConnection):
         url='https://sfnsvr.sh.dto/citrix/newstore/discovery'
         """
         self.domain_list = vdi_config.get(self.parameters.get('vdi').lower(), {}).get(self.parameters.get(
-            'session').lower(), {}).get("ip_list")
+            'session').lower(), {}).get("ip_list", [])
+        self.session = self.parameters.get("session", "")
         # self.domain_list = ['Autotest-C01.sh.dto']
         self.connection_mode = kwargs.get("connection_mode", "workspace")
         self.url = vdi_config['citrix']['url']
@@ -448,32 +607,34 @@ class CitrixLinux(VDIConnection):
         #                       connectionMode=self.connection_mode, password=self.password, user=self.user)
         self.set_vdi_from_yml(citrix_id, settings=self.settings, set_dic=self.set_dic)
 
-    def edit_citrix_connection(self, citrix_id):
-        log.info("edit citrix connection, import url, domain, connectionMode, username, password")
-        os.system("mclient --quiet set root/ConnectionType/xen/connections/{}/address {}".format(citrix_id, self.url))
-        os.system("mclient --quiet set root/ConnectionType/xen/connections/{}/domain {}".format(citrix_id, self.domain))
-        os.system("mclient --quiet set root/ConnectionType/xen/connections/{}/connectionMode {}".format(citrix_id,
-                                                                                                        self.connectionMode))
-        os.system(
-            "mclient --quiet set root/ConnectionType/xen/connections/{}/credentialsType 'password'".format(citrix_id))
-        os.system(
-            "mclient --quiet set root/ConnectionType/xen/connections/{}/password {}".format(citrix_id, self.password))
-        os.system("mclient --quiet set root/ConnectionType/xen/connections/{}/username {}".format(citrix_id, self.user))
-        os.system("mclient --quiet set root/ConnectionType/xen/general/TWIMode 'Force Seamless Off'")
-        os.system("mclient --quiet set root/ConnectionType/xen/general/windowSize 'Full Screen'")
-        os.system("mclient commit")
+    def logon_desktop_by_pic(self):
+        desktops_path = get_current_dir("Test_Data/td_vdi/vdi_pic/citrix_workspace/desktops")
+        desktop_path = get_current_dir("Test_Data/td_vdi/vdi_pic/citrix_workspace/{}".format(self.session.lower()))
+        result = wait_element(desktops_path)
+        if not result:
+            return False
+        loc, shape = result
+        mouse.click(loc[0] + int(shape[1] / 2), loc[1] + int(shape[0] / 2))
+        result = wait_element(desktop_path)
+        if not result:
+            return False
+        loc, shape = result
+        # mouse.click(loc[0] + int(shape[1] / 2), loc[1] + int(shape[0] / 2))
+        pyautogui.click(loc[0] + int(shape[1] / 2), loc[1] + int(shape[0] / 2), interval=0.3, clicks=2)
+        return True
 
     def connect_citrix_VDI(self, citrix_id, session):
         white_list_path = os.path.join(cf.get_current_dir(), "Test_Data", "td_multiple_display", "white_list",
                                        "_citrix")
         log.info("connect citrix VDI desktop")
         time.sleep(1)
-        os.popen("connection-mgr start {}".format(citrix_id))
-        time.sleep(30)
+        # os.popen("connection-mgr start {}".format(citrix_id))
+        self.connect_vdi_by_pic()
+        time.sleep(40)    # try to fix citrix lunch fail
 
         citrix_error_1 = subprocess.getoutput("wmctrl -lx | grep -i 'citrix error'")
         if citrix_error_1:
-            self.error_snapshot('Citrix Error')
+            self.error_snapshot('Citrix_Error')
             log.warning("found citrix error")
             pyautogui.press("enter")
             time.sleep(10)
@@ -481,17 +642,19 @@ class CitrixLinux(VDIConnection):
         citrix_workspace = subprocess.getoutput("wmctrl -lx | grep -i 'citrix workspace'")
         if not citrix_workspace:
             log.error("logon citrix workspace dashboard fail, check use 'wmctrl' script.")
-            self.error_snapshot('open citrix workspace error')
+            self.error_snapshot('open_citrix_workspace_error')
+            os.system("/usr/bin/xen-logoff {}".format(self.id))
             citrix_error = subprocess.getoutput("wmctrl -lx | grep -i 'citrix server error'")
             if citrix_error:
                 log.error("logon citrix workspace dashboard error")
-                self.error_snapshot('HP - Citrix Server Error')
+                self.error_snapshot('HP_Citrix_Server_Error')
                 os.system("wmctrl -c 'HP - Citrix Server Error'")
             os.system("wmctrl -c 'Citrix Workspace'")
             return False
         if citrix_workspace and 'selfservice.Selfservice' not in citrix_workspace:
             log.error("logon citrix workspace dashboard fail")
-            self.error_snapshot('open citrix workspace error')
+            self.error_snapshot('open_citrix_workspace_error')
+            os.system("/usr/bin/xen-logoff {}".format(self.id))
             os.system("wmctrl -c 'Citrix Workspace'")
             time.sleep(0.2)
             os.system("wmctrl -c 'Citrix Workspace'")
@@ -499,27 +662,22 @@ class CitrixLinux(VDIConnection):
         log.info("logon citrix workspace dashboard success, check use 'wmctrl' script.")
 
         time.sleep(2)
-        citrix_desktop_1 = subprocess.getoutput("wmctrl -lx | grep -i '{}'".format(session))
-        if citrix_desktop_1:
-            log.info("logon citrix desktop auto success, check use 'wmctrl' script.")
-            time.sleep(3)
-            mouse.click(1, 1)  # click on the top right corner of the screen
-            return True
-
-        d = subprocess.getoutput(
-            "ls /tmp/citrix/{}/dtopfiles/CitrixApps | grep -i '{}'".format(citrix_id, session[:15]))
-        desktop_name = d.split('.')[1]  # 'Win10 Automatio $A118-17-92F83E3F-0001'
-        desktop_id = 'Controller.{}'.format(desktop_name)
 
         log.info("start logon desktop")
-        os.system("/usr/bin/xen-launch '{}' '{}' &".format(citrix_id, desktop_id))
-        log.info("run command to launch vdi connection")
-
+        self.logon_desktop_by_pic()
         time.sleep(10)
+        x, y = mouse.position()
+        if x >= y > 200:
+            mouse.move(x - 20, y - 20)
+        elif 200 > x >= y:
+            mouse.move(x + 20, y + 20)
+        else:
+            mouse.move(250, 250)
         if wait_element(white_list_path, rate=0.98):
             log.info("found log on error")
             pyautogui.press("enter")
             time.sleep(1)
+            os.system("/usr/bin/xen-logoff {}".format(self.id))
             # os.system("wmctrl -c 'Citrix Workspace'")
             os.system("wmctrl -c 'Citrix Workspace'")
             return "Continue"
@@ -529,11 +687,12 @@ class CitrixLinux(VDIConnection):
             return True
         else:
             log.error("logon citrix desktop fail, check use 'wmctrl' script.")
-            self.error_snapshot('logon citrix desktop fail')
+            self.error_snapshot('logon_citrix_desktop_fail')
+            os.system("/usr/bin/xen-logoff {}".format(self.id))
             citrix_error_2 = subprocess.getoutput("wmctrl -lx | grep -i 'citrix server error'")
             if citrix_error_2:
                 log.error("logon citrix workspace desktop error")
-                self.error_snapshot('HP - Citrix Server Error')
+                self.error_snapshot('HP_Citrix_Server_Error')
                 os.system("wmctrl -c 'HP - Citrix Server Error'")
             os.system("wmctrl -c 'Citrix Workspace'")
             time.sleep(0.2)
@@ -543,9 +702,6 @@ class CitrixLinux(VDIConnection):
     @check_user()
     def logon(self, session='win10'):
         session = vdi_config['citrix'][session.lower()]['name']
-        # if not self.check_vdi_server_connection(self.citrix_server):
-        #     log.error("the network or citrix server error.")
-        #     return "Continue"
         if not self.import_cert():
             log.error("thinpro import rootca Fail")
             return "Continue"
@@ -554,6 +710,7 @@ class CitrixLinux(VDIConnection):
         time.sleep(1)
         if len(self.vdi_connection_id('xen')) == 1:
             citrix_id = self.vdi_connection_id('xen')[0]
+            self.id = citrix_id
         else:
             log.error("not found citrix uuid")
             return "Continue"
@@ -640,12 +797,17 @@ class ViewLinux(VDIConnection):
 
     def logoff(self):
         super().logoff()
+        os.system('unlink /var/run/vmware/1000/*')
         result = os.popen("ps -aux |grep '/usr/lib/vmware/view/bin/vmware-view'").read()
         res = re.findall(r"root *?([0-9]{3,6}) .*? /usr/lib/vmware/view/bin/vmware-view", result, re.S)
         res.extend(re.findall(r"user *?([0-9]{3,6}) .*? /usr/lib/vmware/view/bin/vmware-view", result, re.S))
+        os.system("rm -f /tmp/vmware-user/pipe/*.info")
+        os.system("rm -f /tmp/vmware-user/mmr/*.config")
+        os.system("rm -f /tmp/vmware-user/*.log")
         if res:
             for i in res:
                 os.popen("kill -s 9 '{}'".format(i))
+
         return True
 
 
@@ -705,68 +867,7 @@ class RDPLinux(VDIConnection):
                 self.close_windows(windows)
 
 
-class MultiUserManger:
-    def __init__(self):
-        self.download_base_file = 'download_temp.txt'
-        self.file_path = get_current_dir("Test_Data/common/{}".format(self.download_base_file))
-        self.config_base_file = get_current_dir('Test_Data/common/multi_user.yml')
 
-    @property
-    def config_args(self):
-        yaml_obj = YamlOperator(self.config_base_file)
-        content = yaml_obj.read()
-        return content
-
-    @property
-    def remote_base_file(self):
-        path = self.config_args['path']
-        tree = path.split('/')
-        remote_file = '/'.join(tree[4:])
-        return remote_file
-
-    @property
-    def ftp(self):
-        ip = self.config_args['ip']
-        user = self.config_args['user']
-        pwd = self.config_args['pwd']
-        ftp_obj = FTPUtils(ip, user, pwd)
-        return ftp_obj
-
-    def get_a_available_key(self, key="user"):
-        self.ftp.download_file(self.remote_base_file, self.file_path)
-        time.sleep(2)
-        yaml_obj = YamlOperator(self.file_path)
-        total_users = yaml_obj.read().get(key, {})
-        for k, v in total_users.items():
-            if v in 'available':
-                dic_key = k
-                break
-        else:
-            dic_key = ''
-        if dic_key:
-            self.lock_key(dic_key, key)
-        else:
-            print('no available user could be assigned')
-        return dic_key
-
-    def change_key_state(self, user_name, state, key="user"):
-        self.ftp.download_file(self.remote_base_file, self.file_path)
-        time.sleep(2)
-        yaml_obj = YamlOperator(self.file_path)
-        total_users = yaml_obj.read()
-        value = total_users.get(key).get(user_name)
-        if value:
-            total_users[key][user_name] = state
-            yaml_obj.write(total_users)
-            self.ftp.upload_file(self.file_path, self.remote_base_file)
-        else:
-            print('invalid user')
-
-    def reset_key(self, user_name, key="user"):
-        self.change_key_state(user_name, 'available', key)
-
-    def lock_key(self, user_name, key="user"):
-        self.change_key_state(user_name, 'busy', key)
 
 
 class TelnetLinux(VDIConnection):

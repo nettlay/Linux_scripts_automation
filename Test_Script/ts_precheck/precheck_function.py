@@ -12,7 +12,7 @@ import yaml
 from Common.common_function import argv_filter
 from Common import common_function
 
-log = common_function.log()
+log = common_function.log
 
 
 def get_current_dir():
@@ -24,12 +24,14 @@ def get_current_dir():
 
 # open a window
 def open_window(window_name):
+    log.info("press ctrl alt s to open window {}".format(window_name))
     pyautogui.hotkey("ctrl", "alt", "s")
-    sleep(0.2)
-    pyautogui.typewrite(window_name, interval=0.1)
-    sleep(0.1)
-    pyautogui.press("enter")
     sleep(1)
+    pyautogui.typewrite(window_name, interval=0.1)
+    sleep(0.5)
+    pyautogui.press("enter")
+    sleep(3)
+    log.info("open window {} end".format(window_name))
 
 
 def now():
@@ -40,11 +42,10 @@ def now():
 # search picture on now screen. default search 3 times.
 def check_window(picture, times=1):
     now_resolution = str(pyautogui.size()[0]) + 'x' + str(pyautogui.size()[1])
-
-    if os.path.exists(os.path.join(get_current_dir(), r'Test_Data\td_precheck', now_resolution)):
-        p = os.path.join(get_current_dir(), r'Test_Data\td_precheck', now_resolution, 'picture', picture)
+    if os.path.exists(os.path.join(get_current_dir(), r'Test_Data/td_precheck', now_resolution)):
+        p = os.path.join(get_current_dir(), r'Test_Data/td_precheck', now_resolution, 'picture', picture)
     else:
-        p = os.path.join(get_current_dir(), r'Test_Data\td_precheck', '1920x1080', 'picture', picture)
+        p = os.path.join(get_current_dir(), r'Test_Data/td_precheck', '1920x1080', 'picture', picture)
     # p = os.path.join(get_current_dir(), 'Test_Data', now_resolution, 'picture', picture)
     pyautogui.screenshot("test.png")
     sleep(0.1)
@@ -85,12 +86,16 @@ def primary_card_label():
     output = os.popen('fdisk -l | grep /dev/ | grep -v Disk').readlines()
     line_boot = ''
     for line in output:
-        if '*' in line:
+        # if '*' in line:
+        if 'Linux' in line:
             line_boot = line
             break
     if line_boot != '':
         label_boot = line_boot.split(' ')[0]
-        pri_card_label = label_boot[:-1]
+        if 'mmcblk' in label_boot or 'nvme' in label_boot:
+            pri_card_label = label_boot[:-2]
+        else:
+            pri_card_label = label_boot[:-1]
     else:
         pri_card_label = ''
     return pri_card_label
@@ -136,55 +141,10 @@ def get_ip_from_yml():
     report_path = os.path.join(get_current_dir(), 'Test_Report')
     files = os.walk(report_path)
     for file in files:
-        if '.yaml' in file.lower():
-            ip_addr = file.split('.').remove[-1]
+        if '.yaml' in file[2][0]:
+            ip_addr = file[2][0].split('.')[:-1]
             return '.'.join(ip_addr)
     return 'null'
-
-
-def new_cases_result(file, case_name):
-    result = [{'case_name': case_name,
-               'uut_name': get_ip(),
-               'result': 'Pass',
-               'steps': []
-               }]
-    # file = get_ip() + ".yml"
-    report_file = os.path.join(get_current_dir(), "Test_Report", file)
-    argvs = sys.argv
-    if argvs[1:]:
-        site, host_list, user, password, *params = argv_filter(argvs)
-        report_file = os.path.join(os.path.split(report_file)[0], "{}.yaml".format(site))
-    if not os.path.exists(report_file):
-        open(report_file, 'w+').close()
-    with open(report_file, 'r') as f:
-        current_report = yaml.safe_load(f)
-    if isinstance(current_report, list):
-        current_report.extend(result)
-    else:
-        current_report = result
-    with open(report_file, 'w+') as f:
-        yaml.safe_dump(current_report, f)
-
-
-def update_cases_result(report_file, case_name, steps):
-
-    # file = "./Test_Report/" + report_file
-    file = os.path.join(get_current_dir(), 'Test_Report', report_file)
-    argvs = sys.argv
-    if argvs[1:]:
-        site, host_list, user, password, *params = argv_filter(argvs)
-        file = os.path.join(os.path.split(file)[0], "{}.yaml".format(site))
-
-    with open(file, 'r') as f:
-        current_report = yaml.safe_load(f)
-    for report in current_report:
-        if report['case_name'] == case_name:
-            report['steps'].append(steps)
-            if steps['result'].upper() == 'FAIL':
-                report['result'] = 'Fail'
-            break
-    with open(file, 'w') as f:
-        yaml.safe_dump(current_report, f)
 
 
 class SwitchThinProMode:
@@ -270,10 +230,14 @@ class SwitchThinProMode:
 def card_size(card_label):
     str_command = 'fdisk -l | grep \'Disk {}\''.format(card_label)
     output = subprocess.getoutput(str_command)
-    size_GiB = output.split(',')[0].split(' ')[-2]
-    size_bytes = output.split(',')[1].strip().split(' ')[0]
-    # size_GB = size_bytes.split(' ')[0][:-9]
-    return size_GiB, size_bytes
+    if not output:
+        log.info('No result for querying card label {}'. format(card_label))
+        return False
+    else:
+        size_GiB = output.split(',')[0].split(' ')[-2]
+        size_bytes = output.split(',')[1].strip().split(' ')[0]
+        # size_GB = size_bytes.split(' ')[0][:-9]
+        return size_GiB, size_bytes
 
 
 def partition_size(card_label):
@@ -294,7 +258,7 @@ def partition_size(card_label):
 # Read primary and secondary storage information from DASH matrix excel
 def storage_info(platform, config):
     excel = openpyxl.load_workbook(
-        r'{}/Test_Data/td_precheck/ThinPro7.1_DASH_Test Matrix.xlsx'.format(get_current_dir()))
+        r'{}/Test_Data/User_Defined_Data/td_precheck/ThinPro7.1_DASH_Test Matrix.xlsx'.format(get_current_dir()))
     sheet = excel.active
     rows = sheet.max_row
     cols = sheet.max_column

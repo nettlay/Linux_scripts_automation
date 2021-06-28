@@ -6,9 +6,50 @@ import math
 import shutil
 from mss import mss, tools
 from Common.common_function import get_folder_items, get_current_dir
+from Common.log import log
+import subprocess
+import numpy as np
 
 
-def capture_screen(file_name):
+def capture_screen(file_name, param="-m", auto_fix = False):
+    """
+    use native method scrot(used in hptc-snipping-tool)
+    scrot:
+      -b, --border              When selecting a window, grab wm border too
+      -c, --count               show a countdown before taking the shot
+      -d, --delay NUM           wait NUM seconds before taking a shot
+      -e, --exec APP            run APP on the resulting screenshot
+      -q, --quality NUM         Image quality (1-100) high value means
+                                high size, low compression. Default: 75.
+                                For lossless compression formats, like png,
+                                low quality means high compression.
+      -m, --multidisp           For multiple heads, grab shot from each
+                                and join them together.
+      -s, --select              interactively choose a window or rectangle
+                                with the mouse
+      -u, --focused             use the currently focused window
+      -t, --thumb NUM           generate thumbnail too. NUM is the percentage
+                                of the original size for the thumbnail to be,
+                                or the geometry in percent, e.g. 50x60 or 80x20.
+      -z, --silent              Prevent beeping
+    """
+    dir_path = os.path.dirname(file_name)
+    if dir_path and not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+    call = subprocess.Popen("scrot {} {}".format(param, file_name), stderr=subprocess.PIPE, stdout=subprocess.PIPE, stdin=subprocess.PIPE, shell=True, env=os.environ)
+    stdout, stderr = call.communicate(timeout=30)
+    log.info("info of capture,out:{},error:{}".format(stdout, stderr))
+    log.info("capture screenshot path:{}".format(file_name))
+    if auto_fix:
+        img = cv2.imread(file_name)
+        n1_f = np.sum(img, axis=2) == 0
+        a_g = np.array([102, 102, 102])
+        img[n1_f == True] = a_g
+        cv2.imwrite(file_name, img)
+    return file_name
+
+
+def capture_screen_mss(file_name):
     dir_path = os.path.dirname(file_name)
     if dir_path and not os.path.exists(dir_path):
         os.makedirs(dir_path)
@@ -55,7 +96,8 @@ def get_icon_by_pictures(name, offset=(10, 10), **kwargs):
         img_name = cv2.imread(pic)
         t = cv2.matchTemplate(cv2.imread('demo.png'), img_name, cv2.TM_CCOEFF_NORMED)
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(t)
-
+        log.info("current match picture: {}".format(pic))
+        log.info("rate: {}; picture Similarity: {}".format(rate, max_val))
         if max_val > rate:
             x = max_loc[0]
             y = max_loc[1]
@@ -82,6 +124,8 @@ def get_icon_by_pic(name, offset=(10, 10), **kwargs):
     t = cv2.matchTemplate(cv2.imread("demo.png"), img_name,
                           cv2.TM_CCOEFF_NORMED)
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(t)
+    log.info("current match picture: {}".format(name))
+    log.info("rate: {}; Similarity: {}".format(rate, max_val))
     if max_val > rate:
         x = max_loc[0]
         y = max_loc[1]
@@ -129,7 +173,7 @@ def save_from_data(filename, data):
     cv2.imwrite(filename, data)
 
 
-def compare_picture_auto_collect(screenshot_file, template_file):
+def compare_picture_auto_collect(screenshot_file, template_file, auto_fix=False):
     """
     1.check screenshot_file,
     if not exist ,return
@@ -151,7 +195,9 @@ def compare_picture_auto_collect(screenshot_file, template_file):
         if not os.path.exists(dirs):
             os.makedirs(dirs)
         shutil.copyfile(screenshot_file, template_file)
-    return compare_picture_list(screenshot_file, template_file)
+        path, ext = os.path.splitext(template_file)
+        shutil.copyfile(screenshot_file, "{}_auto{}".format(path, ext))
+    return compare_picture_list(screenshot_file, template_file, auto_fix)
 
 
 @jit()
@@ -169,9 +215,17 @@ def collect_diff_counts(width, height, source, template):
     return diff_count, source
 
 
-def compare_picture(source_file, dest_file):
+def compare_picture(source_file, dest_file, auto_fix=False):
+    """
+    auto_fix: if background is black, turn it to gray
+    """
     source = cv2.imread(source_file)
     dest = cv2.imread(dest_file)
+    if auto_fix:
+        source = np.asarray(source)
+        n1_f = np.sum(source, axis=2) == 0
+        a_g = np.array([102, 102, 102])
+        source[n1_f == True] = a_g
     w, h = source.shape[0], source.shape[1]
 
     if source.shape != dest.shape:
@@ -184,24 +238,34 @@ def compare_picture(source_file, dest_file):
         return 1 - diff_count / (w * h), diff_res
 
 
-def compare_picture_list(source_file, dest_file):
-    source = cv2.imread(source_file)
-    dest = cv2.imread(dest_file)
-    w, h = source.shape[0], source.shape[1]
+def compare_picture_list(source_file, dest_file, auto_fix=False):
+    # source = cv2.imread(source_file)
+    # dest = cv2.imread(dest_file)
+    # if auto_fix:
+    #     source = np.asarray(source)
+    #     n1_f = np.sum(source, axis=2) == 0
+    #     a_g = np.array([102, 102, 102])
+    #     source[n1_f == True] = a_g
+    # w, h = source.shape[0], source.shape[1]
     rs = 0, []
-    if source.shape != dest.shape:
-        rs = 0.1, []
-    else:
-        diff_count, diff_res = collect_diff_counts(w, h, source, dest)
-        rs = 1 - diff_count / (w * h), diff_res
-        if rs[0] > 0.99:
-            return rs
+    # if source.shape != dest.shape:
+    #     rs = 0.1, []
+    # else:
+    #     diff_count, diff_res = collect_diff_counts(w, h, source, dest)
+    #     rs = 1 - diff_count / (w * h), diff_res
+    #     if rs[0] > 0.99:
+    #         return rs
     # check backup picture
     dest_file = os.path.split(dest_file)
     file_name, extend = dest_file[1].split('.')
     for i in range(5):
-        join_name = os.path.join(dest_file[0], '{}_{}.{}'.format(file_name, i, extend))
+        join_name = os.path.join(dest_file[0], '{}{}.{}'.format(file_name, "_{}".format(i) if i else "", extend))
         source = cv2.imread(source_file)
+        if auto_fix:
+            source = np.asarray(source)
+            n1_f = np.sum(source, axis=2) == 0
+            a_g = np.array([102, 102, 102])
+            source[n1_f == True] = a_g
         dest = cv2.imread(join_name)
         w, h = source.shape[0], source.shape[1]
         if not os.path.exists(join_name):

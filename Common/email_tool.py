@@ -11,7 +11,7 @@ import yaml
 from Common.common_function import get_current_dir, check_ip_yaml
 from Common.log import log
 import socket
-
+from Common.support_design_report_style import zip_file_name,get_report_value,get_report_number
 
 class GenerateReport:
     def __init__(self, start, end):
@@ -100,17 +100,12 @@ class GenerateReport:
         final_data = []
         data_dict = {}
 
-        # exclude last item: All
-        # print(raw_data[:-1])
         for item in raw_data[:-1]:
             current_case_list = []
-            # print(item)
             for each_result in source_data:
                 if item[0] == each_result['case_name']:
                     current_case_list.append(each_result)
-            # print('current_case_list', current_case_list)
             final_data.append([item[0], current_case_list, item[1], item[2], 0, item[1] + item[2]])
-            # print(final_data)
         # get last item in list
         total_item = raw_data.pop()
         data_dict['final_data'] = final_data
@@ -154,7 +149,10 @@ def zip_dir(skip_img=True):
     :param outFullName: 压缩文件保存路径+xxxx.zip
     :return: 无
     """
-    filename = get_current_dir('report.zip')
+
+    newfilename = str(zip_file_name(get_report_number(), get_report_value()))
+    filename = get_current_dir('{}.zip').format(newfilename)
+    # filename = get_current_dir('report.zip')
     zip = zipfile.ZipFile(filename, "w", zipfile.ZIP_DEFLATED)
     for path, dirnames, filenames in os.walk(get_current_dir('Test_Report')):
         # 去掉目标跟路径，只对目标文件夹下边的文件及文件夹进行压缩
@@ -185,15 +183,14 @@ def send_mail(recipient, subject='Automation Report Linux', text='', attachment=
 
 
     msg.attach(getAttachment(attachment))
-    print(attachment)
     try:
-        mailServer = smtplib.SMTP(host='smtp1.hp.com', port=25, local_hostname=socket.gethostname())
+        mailServer = smtplib.SMTP(host='15.73.212.81', port=25, local_hostname=socket.gethostname())
         mailServer.ehlo()
         mailServer.starttls()
         mailServer.ehlo()
         mailServer.sendmail(mailUser, recipient, msg.as_string())
         mailServer.close()
-        print("Sent email to %s success" % recipient)
+        log.info("Sent email to %s success" % recipient)
     except:
         import traceback
         log.info(traceback.format_exc())

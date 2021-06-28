@@ -215,7 +215,9 @@ def events(testevent, params=None, callbacktest=None, cbparams=None, assertion=T
         raise AssertionError(notes + "???")
     finally:
         ip = get_ip()
-        path = get_root_path("Test_Report/{}.yaml".format(ip))
+        # path = get_root_path("Test_Report/{}.yaml".format(ip))
+        base_name = get_report_base_name()
+        path = get_current_dir('Test_Report', base_name)
         update_cases_result(path, case_name, steps)
     return True
 

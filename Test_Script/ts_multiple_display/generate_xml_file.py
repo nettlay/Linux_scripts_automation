@@ -1,6 +1,6 @@
 import os
 import subprocess
-
+from Common.common_function import get_current_dir
 from Common.file_operator import XMLOperator
 import copy
 """
@@ -27,7 +27,6 @@ class DisplaySetting:
 
     @staticmethod
     def check_dp_port():
-        # get all connected port
         ports_output = os.popen('xrandr -q | grep connected').readlines()
         ports_name_list = [port.split(' dis')[0].strip() for port in [ports_info_list.split('connected')[0]
                                                               for ports_info_list in ports_output]]
@@ -39,7 +38,7 @@ class DisplaySetting:
             print('Exceeded template length')
             raise FileNotFoundError
         xml_file_name = 'displays_template.xml'
-        return './Test_Data/td_multiple_display/' + xml_file_name
+        return get_current_dir('Test_Data/td_multiple_display/' + xml_file_name)
 
     def generate_list(self):
         for i in self.resolution.keys():
@@ -83,7 +82,6 @@ class DisplaySetting:
             self.mixed_multiply()
 
     def landscape_portrait_coordinate(self, vertical, horizon, init_coordinate, rotation):
-        # 3x2
         if rotation == 'Landscape':
             x, y = 0, 1
         else:
@@ -167,7 +165,7 @@ class DisplaySetting:
             count += 1
         self.set_active_monitors()
         self.set_primary_monitor()
-        self.tree.write('./Test_Data/' + self.save_file)
+        self.tree.write(get_current_dir('Test_Data/' + self.save_file))
         return self.resolution
 
     def set_primary_monitor(self):
