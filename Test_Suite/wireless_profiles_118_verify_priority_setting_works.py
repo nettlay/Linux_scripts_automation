@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 import time
 import pyautogui
@@ -125,11 +126,15 @@ class WirelessPriority:
             return False
 
     def get_wireless_ip(self):
-        sys_wlan0_ip = subprocess.getoutput("ifconfig | grep wlan0 -A 1 | grep -i 'inet addr'")
-        if not sys_wlan0_ip:
-            self.log.info('No wirelss ip get.')
+        time.sleep(5)
+        # sys_wlan0_ip = subprocess.getoutput("ifconfig | grep wlan0 -A 1 | grep -i 'inet addr'")
+        sys_wlan0_ip = subprocess.getoutput("ifconfig | grep wlan0 -A 1")
+        rs = re.findall(r'\d+.\d+.\d+.\d+', sys_wlan0_ip, re.M)
+
+        if not rs:
+            self.log.warning('No wirelss ip get., actual result: {}'.format(sys_wlan0_ip))
             return False
-        wlan0_ip = sys_wlan0_ip.strip().split()[1].split(":")[1]
+        wlan0_ip = rs[0]
         self.log.info('Current wireless ip: {}'.format(wlan0_ip))
         if wlan0_ip:
             return True
@@ -142,7 +147,7 @@ class WirelessPriority:
         if ssid == exp_ssid:
             time.sleep(5)
             if not self.get_wireless_ip():
-                self.log.info('Fail to get wireless ip.')
+                self.log.error('Fail to get wireless ip.')
                 return False
             else:
                 return True
@@ -200,6 +205,11 @@ def set_wireless(**kwargs):
         time.sleep(1)
         wireless_pro.restore_default_settings()
         return False
+    # workaround start
+    # apply using keyboard because apply button might be covered by prompt network message
+    pyautogui.press('tab')
+    pyautogui.press('space')
+    # workaround end
     wireless_pro.apply_control_panel()
     wireless_pro.close_window()
 

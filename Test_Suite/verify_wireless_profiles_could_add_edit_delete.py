@@ -1,3 +1,5 @@
+import pyautogui
+
 from Test_Script.ts_network.network_setting import *
 from Test_Script.ts_power_manager.common_function import SwitchThinProMode
 from Common.common_function import new_cases_result, update_cases_result, get_current_dir, check_ip_yaml
@@ -24,9 +26,9 @@ def check_wl(picture):
             time.sleep(5)
             if wait_element(case_pic("{}".format(picture)), rate=0.99):
                 return True
-        if i == 0:
-            log.info('not found the {} icon will try again after 5s'.format(picture))
-            close_wl_statistics()
+
+        log.warning('not found the {} icon in loop {}/2'.format(picture, i+1))
+        close_wl_statistics()
         time.sleep(5)
     return False
 
