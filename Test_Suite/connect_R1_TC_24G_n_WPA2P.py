@@ -7,7 +7,7 @@ from time import sleep
 from Test_Script.ts_precheck import network_function as nf, precheck_function as cfn
 from Common import common_function
 from Common.tool import get_root_path
-
+from Common.common_function import *
 log = common_function.log
 
 
@@ -16,12 +16,14 @@ def start(case_name, **kwargs):
     log.info("-"*60)
     log.info("case name:" + case_name)
     # report_file = nf.system_ip() + '.yaml'
-    ip = common_function.check_ip_yaml()
-    report_file = get_root_path("Test_Report/{}.yaml".format(ip))
+    # ip = common_function.check_ip_yaml()
+    # report_file = get_root_path("Test_Report/{}.yaml".format(ip))
+    base_name = get_report_base_name()
+    report_file = get_current_dir('Test_Report', base_name)
     common_function.new_cases_result(report_file, case_name)  # new report
 
     if not nf.check_wireless_card():    # check if there is a wireless card
-        step1 = {'step_name': 'step1',
+        step1 = {'step_name': 'check_wireless_card',
                  'result': 'Fail',
                  'expect': 'have wireless card',
                  'actual': 'it has no wireless card',
@@ -32,7 +34,7 @@ def start(case_name, **kwargs):
         return True
 
     if not nf.scan_wireless(SSID="R1-TC_2.4G_n_WPA2P"):
-        step2 = {'step_name': 'step2',
+        step2 = {'step_name': 'scan_wireless',
                  'result': 'Fail',
                  'expect': 'found the R1-TC_2.4G_n_WPA2P in environment',
                  'actual': 'not found the R1-TC_2.4G_n_WPA2P in environment. ',
@@ -56,8 +58,9 @@ def start(case_name, **kwargs):
         log.info("configure ap R1_TC_24G_n_WPA2P in Control Panel fail")
         nf.del_wireless_profile_from_reg()
         # nf.enable_eth0()
-
-        step3 = {'step_name': 'step3',
+        # Restore WiredWirelessSwitch value to default 1 in registry
+        nf.wired_wireless_switch('on')
+        step3 = {'step_name': 'connect_wireless_wpa2_psk',
                  'result': 'Fail',
                  'expect': 'configure ap R1_TC_24G_n_WPA2P in Control Panel success',
                  'actual': 'configure ap R1_TC_24G_n_WPA2P in Control Panel fail',
@@ -71,14 +74,14 @@ def start(case_name, **kwargs):
     conn_result = nf.now_connected_wireless()
     if conn_result == "R1-TC_2.4G_n_WPA2P":
         log.info('connect wireless R1-TC_2.4G_n_WPA2P success')
-        step4 = {'step_name': 'step4',
+        step4 = {'step_name': 'conn_result',
                  'result': 'pass',
                  'expect': 'connect ap R1_TC_24G_n_WPA2P success',
                  'actual': 'connect ap R1_TC_24G_n_WPA2P success',
                  'note': 'null'}
     else:
         log.error("connect ap R1_TC_24G_n_WPA2P fail")
-        step4 = {'step_name': 'step4',
+        step4 = {'step_name': 'conn_result',
                  'result': 'Fail',
                  'expect': 'connect ap R1_TC_24G_n_WPA2P success',
                  'actual': 'connect ap R1_TC_24G_n_WPA2P fail',

@@ -152,20 +152,22 @@ class ScreenLock:
 
     def locktime_in_dialog(self, step_name=''):
         flag = False
-        pyautogui.hotkey('ctrl', 'alt', 'c')
-        time.sleep(0.5)
-        pyautogui.screenshot('img.png')
-        # timed_system_lock_icon = self.wait_pictures('timed_system_lock_icon')
-        timed_system_lock_icon = self.image_match('img.png', 'timed_system_lock_icon')
-        if timed_system_lock_icon:
-            # l_time = self.wait_pictures('locktime')
-            l_time = self.image_match('img.png', 'locktime')
-            if not l_time:
-                self.log.debug('Fail to find locktime', self.img_path + 'locktime_{}.png'.format(step_name))
-            flag = l_time
+        for _ in range(2):
+            pyautogui.hotkey('ctrl', 'alt', 'c')
+            time.sleep(0.5)
+            pyautogui.screenshot('img.png')
+            # timed_system_lock_icon = self.wait_pictures('timed_system_lock_icon')
+            timed_system_lock_icon = self.image_match('img.png', 'timed_system_lock_icon')
+            if timed_system_lock_icon:
+                # l_time = self.wait_pictures('locktime')
+                break
         else:
             self.log.debug('Fail to go to HP Timed System Lock dialog.', self.img_path + 'timed_system_lock_'
                                                                                          'icon_{}.png'.format(step_name))
+        l_time = self.image_match('img.png', 'locktime')
+        if not l_time:
+            self.log.debug('Fail to find locktime', self.img_path + 'locktime_{}.png'.format(step_name))
+        flag = l_time
         pyautogui.hotkey('ctrl', 'alt', 'u')
         os.remove('img.png')
         return flag

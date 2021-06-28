@@ -13,7 +13,7 @@ from Common.vdi_connection import TelnetLinux
 import pyautogui
 from Test_Script.ts_power_manager.common_function import set_user_password
 
-path = os.path.join(common_function.get_current_dir(), 'count_time.txt')
+path = common_function.get_current_dir('count_time.txt')
 log = log.Logger()
 steps_list = (
                 "step1",
@@ -47,32 +47,78 @@ def click_icon(name, **kwargs):
 
 
 def lock_screen():
+    log.info("press ctrl alt s to lock screen")
     ScreenSaver.lock_screen_by_hotkey()
-    if not linux_check_locked():
+    if not linux_check_locked() or click_icon('start'):
+        log.info("screen not locked, try again")
         ScreenSaver.lock_screen_by_command()
 
 
 def unlock_screen(user, password):
     log.info('Try  {}  {}  to unlock screen'.format(user, password))
-    if not click_icon('start') and not click_icon('locked_dialog'):
-        pyautogui.press('enter')
     if click_icon('error'):
+        log.info("found error")
         pyautogui.press('enter')
-    if click_icon('user'):
-        print('user exist')
-        click_icon('user', count=3)
-    pyautogui.typewrite(user)
-    time.sleep(1)
+        time.sleep(2)
+    pyautogui.click(200, 200)
+    pyautogui.press('esc')
+    time.sleep(2)
+    # if not click_icon('start') and not click_icon('locked_dialog'):
+    #     log.info("press enter open locked dialog")
+    #     pyautogui.press('enter')
+    pyautogui.click(200, 200)
+    if click_icon('_tool'):
+        log.info("found tool pic tab 4 times")
+        pyautogui.press("tab", presses=4, interval=0.3)
+    else:
+        log.info("found tool pic tab 8 times")
+        pyautogui.press("tab", presses=8, interval=0.3)
+    log.info("input user")
+    pyautogui.typewrite(user, interval=0.1)
     pyautogui.press("tab")
     time.sleep(1)
+    log.info("input password")
+    pyautogui.typewrite(password, interval=0.1)
+    time.sleep(1)
+    pyautogui.press("enter")
+    time.sleep(2)
+
+
+def unlock_screen1(password):
+    log.info('Try  {}  {}  to unlock screen'.format("user", password))
+    pyautogui.click(200, 200)
+    time.sleep(1)
+    log.info("press esc to dismiss locked dialog")
+    pyautogui.press('esc')
+    time.sleep(2)
+    log.info("open locked dialog click mouse")
+    pyautogui.click(200, 200)
+    log.info("input password")
     pyautogui.typewrite(password)
     time.sleep(1)
     pyautogui.press("enter")
+    time.sleep(2)
 
 
 def reset_settings(*args, **kwargs):
+    case_name = kwargs.get('case_name')
+    SwitchThinProMode(switch_to='admin')
     if not click_icon('start'):
         unlock_screen('root', '1')
+    try:
+        power_m = PowerManagerFactory("ScreenSaver")
+        power_m.ScreenSaver.open_power_manager_from_control_panel()
+        power_m.ScreenSaver.switch()
+        power_m.ScreenSaver.set(pms=pms.ScreenSaver.Enable_Screensaver_and_Screen_Lock, radio="on")
+        power_m.ScreenSaver.set(pms=pms.ScreenSaver.Require_password_for_general_users, radio="off")
+        power_m.ScreenSaver.apply()
+        time.sleep(5)
+        power_m.ScreenSaver.close_all_power_manager()
+    except:
+        log.debug(traceback.format_exc(), common_function.get_current_dir(
+                                            'Test_Report', 'img', '{}.png'.format(case_name.replace(' ', '_'))))
+        os.system("mclient --quiet set root/screensaver/lockScreenUser {}".format(0))
+        os.system("mclient commit")
     os.system('hptc-control-panel --term')
     web = WebConn([])
     web.close_web_connection()
@@ -80,8 +126,6 @@ def reset_settings(*args, **kwargs):
     tl.logoff()
     if os.path.exists(path):
         os.remove(path)
-    os.system("mclient --quiet set root/screensaver/lockScreenUser {}".format(0))
-    os.system("mclient commit")
 
 
 def set_user_password1(**kwargs):
@@ -142,7 +186,7 @@ def step1(*args, **kwargs):
         common_function.update_cases_result(report_file, case_name, steps)
     else:
         error_pic = os.path.join(common_function.get_current_dir(),
-                                 r'Test_Report', 'img', '{}+step1.png'.format(case_name))
+                                 r'Test_Report', 'img', '{}+step1.png'.format(case_name.replace(' ', '_')))
         capture_screen(error_pic)
         steps = {
             'step_name': "verify screen lock dialog shown",
@@ -158,10 +202,12 @@ def step1(*args, **kwargs):
 def step2(*args, **kwargs):
     case_name = kwargs.get("case_name")
     report_file = kwargs.get("report_file")
-    unlock_screen('user', '0')
+    unlock_screen1('0')
     a = click_icon('error')
     time.sleep(5)
-    unlock_screen('user', '1')
+    pyautogui.press('enter')
+    time.sleep(1)
+    unlock_screen1('1')
     b = click_icon('error')
     c = click_icon('locked_dialog')
     if a and not b and not c:
@@ -174,7 +220,7 @@ def step2(*args, **kwargs):
         common_function.update_cases_result(report_file, case_name, steps)
     else:
         error_pic = os.path.join(common_function.get_current_dir(),
-                                 r'Test_Report', 'img', '{}+step2.png'.format(case_name))
+                                 r'Test_Report', 'img', '{}+step2.png'.format(case_name.replace(' ', '_')))
         capture_screen(error_pic)
         steps = {
             'step_name': "verify screen can be resumed successfully",
@@ -249,7 +295,7 @@ def step4(*args, **kwargs):
     a = click_icon('locked_dialog')
     if not a:
         log.debug("first check not found locked dialog",
-                  common_function.get_current_dir('Test_Report', 'img', '{}_locked_dialog.png'.format(case_name)))
+                  common_function.get_current_dir('Test_Report', 'img', '{}_locked_dialog.png'.format(case_name.replace(' ', '_'))))
         pyautogui.press('enter')
         time.sleep(1)
         a = click_icon('locked_dialog')
@@ -378,6 +424,6 @@ def start(case_name, *args, **kwargs):
     except:
         log.error(traceback.format_exc())
         error_pic = os.path.join(common_function.get_current_dir(),
-                                 r'Test_Report', 'img', '{}.png'.format(case_name))
+                                 r'Test_Report', 'img', '{}.png'.format(case_name.replace(' ', '_')))
         capture_screen(error_pic)
         pass

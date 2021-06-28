@@ -18,8 +18,10 @@ def start(case_name, **kwargs):
     SwitchThinProMode(switch_to='admin')
     name = check_powerpic.__name__
     # ip = get_ip()
-    ip = check_ip_yaml()
-    pathyml = get_root_path("Test_Report/{}.yaml".format(ip))
+    # ip = check_ip_yaml()
+    # pathyml = get_root_path("Test_Report/{}.yaml".format(ip))
+    base_name = get_report_base_name()
+    pathyml = get_current_dir('Test_Report', base_name)
     new_cases_result(pathyml, case_name)
     estart_position = check_powerpic()
     flag = False

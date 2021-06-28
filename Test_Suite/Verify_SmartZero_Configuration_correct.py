@@ -2,6 +2,7 @@ from Common import common_function
 from Test_Script.ts_precheck.precheck_function import SwitchThinProMode
 from Test_Script.ts_precheck import network_function
 from Common.tool import get_root_path
+from Common.common_function import *
 
 
 class ConfigureCheck:
@@ -17,10 +18,13 @@ class ConfigureCheck:
     def check(self):
         current_os = common_function.os_configuration()
         if current_os.lower() == 'smart_zero':
-            output = common_function.command_line(self.command_smartzero)[0]
+            output = common_function.command_line(self.command_smartzero)
+            if not output:
+                self.log.info('No output after querying dpkg for zero.')
+                return 'fail'
             string_match = 0
             for string in self.string_zero:
-                if string in output:
+                if string in output[0]:
                     string_match += 1
             if string_match == len(self.string_zero):
                 self.log.info('SmartZero configuration is correct.')
@@ -43,8 +47,10 @@ class ConfigureCheck:
 def start(case_name, **kwargs):
     SwitchThinProMode(switch_to='admin')
     # report_file = network_function.system_ip() + '.yaml'
-    ip = common_function.check_ip_yaml()
-    report_file = get_root_path("Test_Report/{}.yaml".format(ip))
+    # ip = common_function.check_ip_yaml()
+    # report_file = get_root_path("Test_Report/{}.yaml".format(ip))
+    base_name = get_report_base_name()
+    report_file = get_current_dir('Test_Report', base_name)
     common_function.new_cases_result(report_file, case_name)  # new report
     configure_check = ConfigureCheck()
     result = configure_check.check()

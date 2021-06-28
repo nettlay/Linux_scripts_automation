@@ -1,6 +1,7 @@
 import os
 import time
 import pyautogui
+pyautogui.FAILSAFE = False
 import subprocess
 import threading
 from Common import common_function, vdi_connection
@@ -109,19 +110,23 @@ class ScreenLockPassword:
             subprocess.getoutput("mclient --quiet set root/screensaver/lockScreenUser 1 && mclient commit")
 
     def create_vdi_view(self, step_No):
-        self.user = vdi_connection.MultiUserManger().get_a_available_key()
+        for _ in range(6):
+            self.user = vdi_connection.MultiUserManger().get_a_available_key()
+            if self.user:
+                break
+            time.sleep(30)
         self.log.info('user: {}'.format(self.user))
         setting_file = os.path.join(self.path, "Test_Data", "td_common", "thinpro_registry.yml")
         setting_view = YamlOperator(setting_file).read()["set"]["view"]
         if step_No == 'step1&2':
             setting = setting_view["screen_lock_with_password_step2"]
-            self.parameters = {'vdi': 'view', 'session': 'pcoip win10'}
+            self.parameters = {'vdi': 'view', 'session': 'blast win10'}
         elif step_No == 'step3&4':
             setting = setting_view["screen_lock_with_password_step3"]
-            self.parameters = {'vdi': 'view', 'session': 'pcoip win10'}
+            self.parameters = {'vdi': 'view', 'session': 'blast win10'}
         else:
             setting = '{}'
-            self.parameters = {'vdi': 'view', 'session': 'pcoip win10'}
+            self.parameters = {'vdi': 'view', 'session': 'blast win10'}
         self.vdi = vdi_connection.ViewLinux(user=self.user, setting=setting, parameters=self.parameters)
         return self.vdi, self.user
 
@@ -151,11 +156,13 @@ class ScreenLockPassword:
         self.reset_key(self.user, key='user')
         return logoff_result
 
-    @staticmethod
-    def reset_key(user, key):
+    def reset_key(self, user, key):
+        self.log.info('start reset user: {}'.format(user))
         vdi_connection.MultiUserManger().reset_key(user, key)
 
     def lock_screen(self, passw=True, locked_by='normal'):
+        self.scr_save.lock_screen_by_hotkey()
+        time.sleep(2)
         self.scr_save.lock_screen_by_hotkey()
         self.log.info('Press ctrl+alt+l to lock.')
         time.sleep(3)
@@ -197,6 +204,8 @@ class ScreenLockPassword:
             common_function.update_cases_result(report_file, case_name, step)
             return True
         else:
+            self.log.debug('Fail to unlock vdi view',
+                           common_function.get_current_dir("Test_Report", 'img', 'unlock_vdi_view_result.png'))
             step = {'step_name': 'Check unlock result for vdi view',
                      'result': 'Fail',
                      'expect': 'Unlock vdi view successfully.',
@@ -291,26 +300,33 @@ def start(case_name, **kwargs):
     if not create_result_step1[1]:
         scr_lock_passw.deal_with_unexpected()
         return False
-    connect_step1_2 = scr_lock_passw.connect_vdi_view()
-    # pyautogui.screenshot(img_path + 'connect_step1&2.png')
-    # time.sleep(1)
-    if connect_step1_2 is not True:
-        pyautogui.screenshot(img_path + 'judge_connect_fail_step1&2.png')
+    for _ in range(2):
+        if scr_lock_passw.connect_vdi_view() is True:
+            for _ in range(10):
+                time.sleep(10)
+                if scr_lock_passw.judge_vdi_connect_UI():
+                    break
+            else:
+                log.debug("log on vdi fail",
+                          common_function.get_current_dir('Test_Report', 'img',
+                                                          '{}.png'.format(case_name.replace(' ', '_'))))
+                scr_lock_passw.vdi.logoff()
+                time.sleep(5)
+                continue
+            break
+        subprocess.getoutput('wmctrl -c Server Login')
+        subprocess.getoutput('wmctrl -c VMware Horizon Client')
         time.sleep(5)
-        connect_UI = scr_lock_passw.judge_vdi_connect_UI()
-        # pyautogui.screenshot(img_path + 'connect_UI_step1&2.png')
-        # time.sleep(1)
-        if not connect_UI:
-            pyautogui.screenshot(img_path + 'judge_fail_connect_UI_step1&2.png')
-            time.sleep(1)
-            step = {'step_name': 'Connect vdi view for step 1&2',
-                     'result': 'Fail',
-                     'expect': 'Vdi view should be connected.',
-                     'actual': 'Fail to connect vdi view.',
-                     'note': 'none'}
-            common_function.update_cases_result(report_file, case_name, step)
-            scr_lock_passw.deal_with_unexpected(create_result_step1[1])
-            return False
+    else:
+        pyautogui.screenshot(img_path + 'connect_view_fail_step1&2.png')
+        step = {'step_name': 'Connect vdi view for step 1&2',
+                 'result': 'Fail',
+                 'expect': 'Vdi view should be connected.',
+                 'actual': 'Fail to connect vdi view.',
+                 'note': 'none'}
+        common_function.update_cases_result(report_file, case_name, step)
+        scr_lock_passw.deal_with_unexpected(create_result_step1[1])
+        return False
     lock_step_1_2 = scr_lock_passw.lock_screen(passw=False)
     if not lock_step_1_2:
         step = {'step_name': 'Lock screen for step 1&2',
@@ -343,7 +359,25 @@ def start(case_name, **kwargs):
     if not create_result_step3[1]:
         scr_lock_passw.deal_with_unexpected()
         return False
-    if scr_lock_passw.connect_vdi_view() is not True:
+    for _ in range(2):
+        if scr_lock_passw.connect_vdi_view() is True:
+            for _ in range(10):
+                time.sleep(10)
+                if scr_lock_passw.judge_vdi_connect_UI():
+                    break
+            else:
+                log.debug("log on vdi fail",
+                          common_function.get_current_dir('Test_Report', 'img',
+                                                          '{}.png'.format(case_name.replace(' ', '_'))))
+                scr_lock_passw.vdi.logoff()
+                time.sleep(5)
+                continue
+            break
+        subprocess.getoutput('wmctrl -c Server Login')
+        subprocess.getoutput('wmctrl -c VMware Horizon Client')
+        time.sleep(5)
+    else:
+        pyautogui.screenshot(img_path + 'connect_view_fail_step3&4.png')
         step = {'step_name': 'Connect vdi view for step 3&4',
                  'result': 'Fail',
                  'expect': 'Vdi view should be connected.',
@@ -401,24 +435,41 @@ def start(case_name, **kwargs):
            'domain': 'sh',
            'desktopSize': '"All Monitors"',
            'viewSecurityLevel': '"Allow all connections"',
-           'server': 'vnsvr.sh.dto',
-           'preferredProtocol': '"PCOIP"',
-           'desktop': 'AutoTestW10-P',
+           'server': 'v8svr.sh.dto',
+           'preferredProtocol': '"BLAST"',
+           'desktop': 'AutoTestW10-B',
            'SingleSignOn': '1'}
     view.set_vdi(view_id, dic)
-    view.connect_vdi(view_id)
-    log.info("Launch View Login dialog.")
-    time.sleep(5)
-    pyautogui.typewrite(user)
-    time.sleep(1)
-    pyautogui.hotkey('tab')
-    time.sleep(1)
-    pyautogui.typewrite(passw, interval=0.1)
-    time.sleep(1)
-    pyautogui.hotkey('enter')
-    time.sleep(15)
-    connected = scr_lock_passw.judge_vdi_connect_UI()
-    if not connected:
+    # view.connect_vdi(view_id)
+    for _ in range(2):
+        view.connect_vdi_by_pic()     # connection vdi by click vdi icon in desktop
+        log.info("Launch View Login dialog.")
+        time.sleep(10)
+        pyautogui.typewrite(user)
+        time.sleep(1)
+        pyautogui.hotkey('tab')
+        time.sleep(1)
+        pyautogui.typewrite(passw, interval=0.1)
+        time.sleep(1)
+        pyautogui.hotkey('enter')
+        for _ in range(10):
+            time.sleep(10)
+            if scr_lock_passw.judge_vdi_connect_UI():
+                break
+        else:
+            log.debug("log on vdi fail",
+                      common_function.get_current_dir('Test_Report', 'img',
+                                                      '{}.png'.format(case_name.replace(' ', '_'))))
+            scr_lock_passw.vdi.logoff()
+            time.sleep(5)
+            continue
+        conn = scr_lock_passw.wait_pictures("vm_error")
+        if not conn:
+            break
+        scr_lock_passw.vdi.logoff()
+        time.sleep(5)
+    else:
+        pyautogui.screenshot(img_path + 'connect_view_fail_step5&6.png')
         step = {'step_name': 'Connect vdi view for step 5&6',
                  'result': 'Fail',
                  'expect': 'Vdi view should be connected.',
@@ -523,7 +574,25 @@ def start(case_name, **kwargs):
     if not create_result_step9[1]:
         scr_lock_passw.deal_with_unexpected()
         return False
-    if scr_lock_passw.connect_vdi_view() is not True:
+    for _ in range(2):
+        if scr_lock_passw.connect_vdi_view() is True:
+            for _ in range(10):
+                time.sleep(10)
+                if scr_lock_passw.judge_vdi_connect_UI():
+                    break
+            else:
+                log.debug("log on vdi fail",
+                          common_function.get_current_dir('Test_Report', 'img',
+                                                          '{}.png'.format(case_name.replace(' ', '_'))))
+                scr_lock_passw.vdi.logoff()
+                time.sleep(5)
+                continue
+            break
+        subprocess.getoutput('wmctrl -c Server Login')
+        subprocess.getoutput('wmctrl -c VMware Horizon Client')
+        time.sleep(5)
+    else:
+        pyautogui.screenshot(img_path + 'connect_view_fail_step9.png')
         step = {'step_name': 'Connect vdi view for step 9',
                  'result': 'Fail',
                  'expect': 'Vdi view should be connected.',
@@ -601,11 +670,5 @@ def start(case_name, **kwargs):
     scr_lock_passw.restore_default_settings()
     log.info('-------------Finish step 9-------------------')
     time.sleep(10)
-
-
-
-
-
-
 
 

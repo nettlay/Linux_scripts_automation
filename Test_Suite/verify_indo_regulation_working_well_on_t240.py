@@ -194,6 +194,17 @@ def preparation(**kwargs):
     log = kwargs.get("log")
     log.info('start check_wireless_card')
     wireless_indo.switch_user('admin')
+    current_platform = common_function.get_platform()
+    log.info('Current platform is: {}'.format(current_platform))
+    if not current_platform:
+        update_case_result(False, 'check_platform', **kwargs)
+        wireless_indo.restore_default_settings()
+        return False
+    if current_platform.upper() != 'T240':
+        log.info('Current platform is not t240.')
+        update_case_result(False, 'check_platform_t240', **kwargs)
+        wireless_indo.restore_default_settings()
+        return False
     result = wireless_indo.wireless.check_wireless_card()
     update_case_result(result, 'check_wireless_card', **kwargs)
     if not result:
@@ -246,6 +257,7 @@ def set_wireless(**kwargs):
     log.info('start set_wireless')
     wireless_indo.wireless.wired_wireless_switch('off')
     time.sleep(1)
+    wireless_indo.switch_user('admin')
     open_result = wireless_indo.open_network_wireless_dialog()
     update_case_result(open_result, 'open_network_wireless_dialog', **kwargs)
     if not open_result:

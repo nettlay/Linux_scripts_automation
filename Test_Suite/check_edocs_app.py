@@ -104,14 +104,14 @@ class Edocs_App:
             rs, shape = response
             return rs
         except AssertionError as e:
-            print(e)
+            traceback.print_exc()
             try:
                 response = check_object_exist("hp_app_icon.png")
                 assert response is not None, "can't find hp_app_icon but it's a script bug"
                 rs, shape = response
                 return rs
             except AssertionError as e:
-                print(e)
+                traceback.print_exc()
         return
 
     @staticmethod
@@ -153,11 +153,11 @@ class Edocs_App:
             events(self.check_home_exist, home_img, assertion=False, annotation=(name, "cancel icon can't work"),
                    case_name=self.case_name)
         except AssertionError as e:
-            print(e)
+            traceback.print_exc()
             if "check_home_exist" in repr(e):
                 return False
         except Exception as e:
-            print(e)
+            traceback.print_exc()
             return False
         return True
 
@@ -196,7 +196,7 @@ class Edocs_App:
             events(self.check_upicon_color, up_en_cio, self.sglclick, "fromtest", annotation=(name,), case_name=self.case_name)
             events(self.check_backing_out, up_en_cio, assertion=False, annotation=(name,), case_name=self.case_name)
         except AssertionError as e:
-            print(e)
+            traceback.print_exc()
             print("repreation()")
             try:
                 self.repreparation(cancel_ico)
@@ -217,7 +217,7 @@ class Edocs_App:
             events(self.check_upicon_color, up_en_cio, self.sglclick, "fromtest", annotation=(name,), case_name=self.case_name)
             events(self.check_backing_out, up_en_cio, assertion=False, annotation=(name,), case_name=self.case_name)
         except AssertionError as e:
-            print(e)
+            traceback.print_exc()
             print("repreation()")
             try:
                 self.repreparation(cancel_ico)
@@ -238,7 +238,7 @@ class Edocs_App:
             events(self.check_pdf_can_open, rtf, assertion=False, annotation=(name,), case_name=self.case_name)
             events(self.close_pdf, pdfclosebtn, self.sglclick, "fromtest", annotation=(name,), case_name=self.case_name)
         except AssertionError as e:
-            print(e)
+            traceback.print_exc()
             print("repreation()")
             try:
                 self.repreparation(cancel_ico)
@@ -250,8 +250,10 @@ class Edocs_App:
 def start(case_name, **kwargs):
     SwitchThinProMode(switch_to='admin')
     # ip = get_ip()
-    ip = check_ip_yaml()
-    path = get_root_path("Test_Report/{}.yaml".format(ip))
+    # ip = check_ip_yaml()
+    # path = get_root_path("Test_Report/{}.yaml".format(ip))
+    base_name = get_report_base_name()
+    path = get_current_dir('Test_Report', base_name)
     new_cases_result(path, case_name)
     home_img = "hp_regulatory_docs_app.png"
     check_dic = {"EULA.png": "PDFLIST1.png",

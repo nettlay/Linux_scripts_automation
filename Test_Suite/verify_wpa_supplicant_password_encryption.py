@@ -12,6 +12,8 @@ def start(case_name, **kwargs):
     log.info("case name:" + case_name)
     report_file = os.path.join(cf.get_current_dir(), "Test_Report", "{}.yaml".format(cf.check_ip_yaml()))
     cf.new_cases_result(report_file, case_name)
+    before = subprocess.getoutput("mclient --quiet get root/Network/userLockEngaged")
+    log.info("current userLockEngaged value {}".format(before))
 
     wired = network_setting.Wired()
     wireless = network_setting.Wireless()
@@ -121,6 +123,18 @@ def start(case_name, **kwargs):
         time.sleep(3)
         if wired.check_wired_is_connected():
             break
+    after = subprocess.getoutput("mclient --quiet get root/Network/userLockEngaged")
+    log.info("after userLockEngaged value {}".format(after))
+    if after == before:
+        log.info("after and before value are same as,not restore userLockEngaged value")
+    else:
+        log.info("userLockEngaged Different values ​​before and after operation")
+        order = ("mclient --quiet set root/Network/userLockEngaged {}".format(before))
+        commit = "mclient commit"
+        cmd = order + '&&' + commit
+        subprocess.getoutput(cmd)
+        time.sleep(3)
+        log.info("edit userLockEngaged value successful")
     log.info("{:+^80}".format("test case pass"))
     return True
 

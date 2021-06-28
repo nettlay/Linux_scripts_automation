@@ -92,6 +92,12 @@ def start(case_name, **kwargs):
         SwitchThinProMode(switch_to='admin')
         if 'mt' not in get_platform().lower():
             log.warning('There is no need to run this case on DTC')
+            step1 = {'step_name': 'check current platform',
+                     'result': 'Fail',
+                     'expect': '',
+                     'actual': '',
+                     'note': 'current platform is not mtc, skip the case'}
+            common_function.update_cases_result(result_file, case_name, step1)
             return
         power_manager = PowerManagerFactory("Battery")
         power_manager.Battery.open_power_manager_from_control_panel()

@@ -91,7 +91,15 @@ def start(case_name, **kwargs):
         new_cases_result(result_file, case_name)
         SwitchThinProMode(switch_to='admin')
         power_manager = PowerManagerFactory("AC")
-        power_manager.AC.open_power_manager_from_control_panel()
+        if not power_manager.AC.open_power_manager_from_control_panel():
+            steps = {
+                'step_name': 'verify the cpu run with ondemand on AC',
+                'result': 'Fail',
+                'expect': '',
+                'actual': '',
+                'note': 'power manager open fail'}
+            update_cases_result(result_file, case_name, steps)
+            return False
         power_manager.AC.switch()
         default_mode = get_cup_mode()
         cpu_mhz_list = []

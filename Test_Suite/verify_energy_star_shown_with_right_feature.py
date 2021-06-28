@@ -61,4 +61,5 @@ def start(case_name, **kwargs):
               "yml_path": yml_path}
     step_list = ['step1', 'reboot', 'step3', 'resume']
     case_steps_run_control(step_list, __name__, **params)
+    resume()
     return

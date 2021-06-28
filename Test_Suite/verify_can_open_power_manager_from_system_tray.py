@@ -19,6 +19,12 @@ def start(case_name, **kwargs):
     platform = subprocess.getoutput("hptc-hwsw-id --hw")
     if "mt" not in platform:
         log.error("dtc can't run this case")
+        step1 = {'step_name': 'check current platform',
+                 'result': 'Fail',
+                 'expect': '',
+                 'actual': '',
+                 'note': 'current platform is not mtc, skip the case'}
+        cf.update_cases_result(report_file, case_name, step1)
         log.info("{:+^70}".format("this case test over"))
         time.sleep(1)
         return False

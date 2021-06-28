@@ -57,6 +57,7 @@ def start(case_name, **kwargs):
     log.info("start download big file from ftp")
     save_file_name = cf.get_current_dir("Test_Report/300m")
     try:
+        log.info("start check and remove download file")
         ftp = file_transfer.FTPUtils(server="ostestftp.sh.dto", username="anonymous", password="123")
         ftp.download_file(file_name="300m.dd.gz", save_as_name=save_file_name)
     except:
@@ -90,8 +91,6 @@ def start(case_name, **kwargs):
                        'actual': 'download big file from ftp success',
                        'note': ''}
     cf.update_cases_result(report_file, case_name, download_report)
-    log.info("remove download file")
-    os.remove(save_file_name)
     log.info("{:+^80}".format("test case success"))
     return True
 

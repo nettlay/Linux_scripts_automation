@@ -126,6 +126,32 @@ class PPTPVPN:
         time.sleep(1)
         self.restore_default_settings()
 
+    def find_vpn_connection_error(self, wait=60):
+        count = 0
+        now_time = time.time()
+        time_gap = 0
+        while time_gap <= wait and count < 2:
+            time_gap = time.time() - now_time
+            result = self.wait_pictures("vpn_error")
+            if not result:
+                time.sleep(3)
+                continue
+            count += 1
+            button_pos = self.wait_pictures("ok")
+            if button_pos and count < 2:
+                pyautogui.click(result[0])
+            elif count < 2:
+                pyautogui.hotkey('enter')
+            else:
+                pyautogui.hotkey("right")
+                time.sleep(2)
+                pyautogui.hotkey('enter')
+            time.sleep(5)
+        if count < 2:
+            return False
+        self.log.info("Find Error Times: {}".format(count))
+        return True
+
 
 pptp_vpn = PPTPVPN()
 
@@ -159,7 +185,9 @@ def configure_pptp_vpn(**kwargs):
 def check_configure_pptp_vpn_result(**kwargs):
     log = kwargs.get("log")
     log.info('start check_configure_pptp_vpn_result')
-    check_result = pptp_vpn.check_vpn_result()
+    check_result = False
+    if not pptp_vpn.find_vpn_connection_error():
+        check_result = pptp_vpn.check_vpn_result()
     update_case_result(check_result, 'check_configure_pptp_vpn_result', **kwargs)
     if not check_result:
         pptp_vpn.deal_with_unexpected('fail_check_pptp_vpn_result.png')
@@ -175,7 +203,9 @@ def reboot(**kwargs):
 def check_pptp_vpn_result_reboot(**kwargs):
     log = kwargs.get("log")
     log.info('start check_pptp_vpn_result_reboot')
-    check_result = pptp_vpn.check_vpn_result()
+    check_result = False
+    if not pptp_vpn.find_vpn_connection_error():
+        check_result = pptp_vpn.check_vpn_result()
     update_case_result(check_result, 'check_pptp_vpn_result_reboot', **kwargs)
     if not check_result:
         pptp_vpn.deal_with_unexpected('fail_check_pptp_vpn_result_reboot.png')

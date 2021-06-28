@@ -5,6 +5,7 @@ import os
 import subprocess
 from Test_Script.ts_precheck.precheck_function import SwitchThinProMode
 from Common.tool import get_root_path
+from Common.common_function import *
 
 
 class SecurityBoot:
@@ -97,8 +98,10 @@ class SecurityBoot:
 def start(case_name, **kwargs):
     SwitchThinProMode(switch_to='admin')
     # report_file = network_function.system_ip() + '.yaml'
-    ip = common_function.check_ip_yaml()
-    report_file = get_root_path("Test_Report/{}.yaml".format(ip))
+    # ip = common_function.check_ip_yaml()
+    # report_file = get_root_path("Test_Report/{}.yaml".format(ip))
+    base_name = get_report_base_name()
+    report_file = get_current_dir('Test_Report', base_name)
     common_function.new_cases_result(report_file, case_name)  # new report
     security_boot = SecurityBoot()
     current_platform = common_function.get_platform()

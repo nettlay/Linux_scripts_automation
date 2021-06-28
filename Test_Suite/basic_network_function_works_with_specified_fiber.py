@@ -58,6 +58,7 @@ def dynamic_ip_check(case_name, result_file, wired):
 
 def dynamic_ip_ping(case_name, result_file):
     log.info("ping any other available host, ex.15.83.240.98")
+    time.sleep(10)
     ping_res = ping_server(ip="15.83.240.98")
     if ping_res:
         steps = {
@@ -153,6 +154,18 @@ def reset_connection_method(method):
     time.sleep(2)
 
 
+def modify_ip(gateway):
+    n = int(gateway.split('.')[-1])
+    ip = get_ip()
+    ip_lis = ip.split('.')
+    m = int(ip_lis[-1])
+    if n < m < n+13:
+        m += 1
+    ip_lis[-1] = str(m)
+    ip = ".".join(ip_lis)
+    return ip
+
+
 def start(case_name, **kwargs):
     try:
         log.info('Begin to start case {}'.format(case_name))
@@ -178,9 +191,9 @@ def start(case_name, **kwargs):
         if dynamic_ip_ping(case_name, result_file) is False:
             reset_connection_method(default_method)
             return
-        ip = get_ip()
-        mask = wired.get_mask('eth0')
+        mask = wired.get_mask('eth1')
         gateway = wired.gateway()
+        ip = modify_ip(gateway)
         if static_ip_check(case_name, result_file, wired, ip, mask, gateway) is False:
             reset_connection_method(default_method)
             return

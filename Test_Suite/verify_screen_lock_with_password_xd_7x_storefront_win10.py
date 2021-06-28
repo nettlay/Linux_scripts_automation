@@ -2,6 +2,7 @@
 import os
 import time
 import pyautogui
+pyautogui.FAILSAFE = False
 import traceback
 import subprocess
 from Common.log import Logger
@@ -44,11 +45,16 @@ def step_1(**kwargs):
 
 def step_2(**kwargs):
     log = kwargs.get("log")
+    case_name = kwargs.get("case_name")
     try:
         pmcf.SwitchThinProMode("user")
         multiuser = vdi_connection.MultiUserManger()
-        user = multiuser.get_a_available_key()
-        if not user:
+        for _ in range(6):
+            user = multiuser.get_a_available_key()
+            if user:
+                break
+            time.sleep(180)
+        else:
             log.error("not get a valid user")
             return [False, "not has invalid user"]
         parameters = {'vdi': 'citrix', 'session': 'win10'}
@@ -56,13 +62,22 @@ def step_2(**kwargs):
                                         setting=vdi_setting()["set"]["citrix"]["screen_lock_with_password_step2"],
                                         parameters=parameters)
 
-        if not citrix.logon(parameters.get("session", "")):
-            log.error("log on vdi fail")
-            os.system("wmctrl -c 'Citrix Workspace'")
-            multiuser.reset_key(user)
-            return [False, "log on vdi fail"]
-        if not wait_element(pic("_win10_start_icon")):
-            log.error("log on vdi fail, not into vdi desktop")
+        for _ in range(2):
+            if citrix.logon(parameters.get("session", "")):
+                for _ in range(10):
+                    time.sleep(10)
+                    if wait_element(pic("_win10_start_icon")):
+                        break
+                else:
+                    log.debug("log on vdi fail",
+                              cf.get_current_dir('Test_Report', 'img', '{}.png'.format(case_name.replace(' ', '_'))))
+                    citrix.logoff()
+                    time.sleep(5)
+                    continue
+                break
+        else:
+            log.debug("log on vdi fail",
+                      cf.get_current_dir('Test_Report', 'img', '{}.png'.format(case_name.replace(' ', '_'))))
             os.system("wmctrl -c 'Citrix Workspace'")
             multiuser.reset_key(user)
             return [False, "log on vdi fail"]
@@ -98,8 +113,12 @@ def step_3_4(**kwargs):
     try:
         pmcf.SwitchThinProMode("user")
         multiuser = vdi_connection.MultiUserManger()
-        user = multiuser.get_a_available_key()
-        if not user:
+        for _ in range(6):
+            user = multiuser.get_a_available_key()
+            if user:
+                break
+            time.sleep(180)
+        else:
             log.error("not get a valid user")
             return [False, "not has invalid user"]
         parameters = {'vdi': 'citrix', 'session': 'win10'}
@@ -107,17 +126,24 @@ def step_3_4(**kwargs):
                                          setting=vdi_setting()["set"]["citrix"]["screen_lock_with_password_step3"],
                                          parameters=parameters)
 
-        if not citrix.logon(parameters.get("session", "")):
-            log.error("log on vdi fail")
-            log.debug("log on vdi fail", cf.get_current_dir('Test_Report', 'img', '{}.png'.format(case_name)))
+        for _ in range(2):
+            if citrix.logon(parameters.get("session", "")):
+                for _ in range(10):
+                    time.sleep(10)
+                    if wait_element(pic("_win10_start_icon")):
+                        break
+                else:
+                    log.debug("log on vdi fail",
+                              cf.get_current_dir('Test_Report', 'img', '{}.png'.format(case_name.replace(' ', '_'))))
+                    citrix.logoff()
+                    time.sleep(5)
+                    continue
+                break
+        else:
+            log.debug("log on vdi fail",
+                      cf.get_current_dir('Test_Report', 'img', '{}.png'.format(case_name.replace(' ', '_'))))
             multiuser.reset_key(user)
             return [False, "log on vdi fail"]
-        if not wait_element(pic("_win10_start_icon")):
-            log.debug("log on vdi fail", cf.get_current_dir('Test_Report', 'img', '{}.png'.format(case_name)))
-            log.error("log on vdi fail")
-            multiuser.reset_key(user)
-            return [False, "not in the vdi desktop"]
-
         log.info("logon vdi success")
         screensaver = ScreenSaver()
         screensaver.lock_screen_by_hotkey()
@@ -127,7 +153,8 @@ def step_3_4(**kwargs):
 
         if not wait_element(pic("_vdi_lock_screen_dialog")):
             log.error("not found screen lock by 'sh autotest'")
-            log.debug("not found screen lock by 'sh autotest'", cf.get_current_dir('Test_Report', 'img', '{}.png'.format(case_name)))
+            log.debug("not found screen lock by 'sh autotest'",
+                      cf.get_current_dir('Test_Report', 'img', '{}.png'.format(case_name.replace(' ', '_'))))
             citrix.logoff()
             multiuser.reset_key(user)
             return [False, "not found screen lock by 'sh autotest'"]
@@ -138,7 +165,8 @@ def step_3_4(**kwargs):
         time.sleep(2)
         if not wait_element(pic("_win10_start_icon")):
             log.error("not into the vdi connection")
-            log.debug("not into the vdi connection", cf.get_current_dir('Test_Report', 'img', '{}.png'.format(case_name)))
+            log.debug("not into the vdi connection",
+                      cf.get_current_dir('Test_Report', 'img', '{}.png'.format(case_name.replace(' ', '_'))))
             citrix.logoff()
             multiuser.reset_key(user)
             return [False, "not into the vdi connection"]
@@ -155,12 +183,17 @@ def step_3_4(**kwargs):
 def step_5_6(**kwargs):
     log = kwargs.get("log")
     session = kwargs.get("session")
+    case_name = kwargs.get('case_name')
     root_password = kwargs.get("root_password", "1")
     try:
         pmcf.SwitchThinProMode("user")
         multiuser = vdi_connection.MultiUserManger()
-        user = multiuser.get_a_available_key()
-        if not user:
+        for _ in range(6):
+            user = multiuser.get_a_available_key()
+            if user:
+                break
+            time.sleep(180)
+        else:
             log.error("not get a valid user")
             return [False, "not has invalid user"]
         citrix = vdi_connection.CitrixLinux(user=user,
@@ -178,61 +211,68 @@ def step_5_6(**kwargs):
 
         log.info("connect citrix VDI desktop")
         time.sleep(1)
-        os.popen("connection-mgr start {}".format(citrix_id))
-        time.sleep(10)
-        if not wait_element(pic("_citrix_input_credentials_dialog")):
-            log.error("not open input credentials dialog")
-            os.system("wmctrl -c 'Citrix Workspace'")
-            multiuser.reset_key(user)
-            return [False, "not open input credentials dialog"]
-        log.info("input domain, user and password")
-        pyautogui.typewrite(r"{}\{}".format(vdi_user_info()["domain"], user), interval=0.1)
-        pyautogui.press("tab")
-        pyautogui.typewrite(vdi_user_info()["password"], interval=0.1)
-        pyautogui.press("enter")
-        time.sleep(20)
+        # os.popen("connection-mgr start {}".format(citrix_id))
+        for _ in range(2):
+            citrix.connect_vdi_by_pic()
 
-        if not wait_element(pic("_citrix_workspace_broker")):
-            if wait_element(pic("_win10_start_icon")):             # check whether auto logon vdi desktop
-                log.info("auto logon vdi desktop success")
-                pyautogui.click(1, 1)
-            else:
-                log.error("open citrix workspace broker fail")
-                os.system("wmctrl -c 'Citrix Workspace'")
-                multiuser.reset_key(user)
-                return [False, "open citrix workspace broker fail"]
-        else:
-            log.info("open citrix workspace broker success")
-            session = vdi_user_info()['citrix'][session.lower()]['name']
-            d = subprocess.getoutput(
-                "ls /tmp/citrix/{}/dtopfiles/CitrixApps | grep -i '{}'".format(citrix_id, session[:15]))
-            desktop_name = d.split('.')[1]                 # 'Win10 Automatio $A118-17-92F83E3F-0001'
-            desktop_id = 'Controller.{}'.format(desktop_name)
-
-            log.info("start logon desktop")                   # need add write list===============================
-            os.system("/usr/bin/xen-launch '{}' '{}' &".format(citrix_id, desktop_id))
-            log.info("run log on citrix vdi")
             time.sleep(10)
-            if wait_element(pic("_citrix_error"), rate=0.98):
-                pyautogui.screenshot(cf.get_current_dir("Test_Report/{}_error.png".format(cf.now())))
-                log.info("found citrix log on error")
-                pyautogui.press("enter")
+            if not wait_element(pic("_citrix_input_credentials_dialog")):
+                log.debug("not open input credentials dialog",
+                          cf.get_current_dir('Test_Report', 'img', '{}.png'.format(case_name.replace(' ', '_'))))
+                os.system("wmctrl -c 'HP - Citrix Server Error'")
                 os.system("wmctrl -c 'Citrix Workspace'")
-                multiuser.reset_key(user)
-                return [False, "find error 'unable to launch Controller.desktop'"]
-            for i in range(15):
-                log.info("wait log on citrix desktop...")
-                time.sleep(10)
-                if wait_element(pic("_win10_start_icon")):
-                    log.info("login vdi connection success")
+                time.sleep(5)
+                continue
+            log.info("input domain, user and password")
+            pyautogui.typewrite(r"{}\{}".format(vdi_user_info()["domain"], user), interval=0.1)
+            pyautogui.press("tab")
+            pyautogui.typewrite(vdi_user_info()["password"], interval=0.1)
+            pyautogui.press("enter")
+            log.info(
+                r"user: '{}\{}', password: '{}'".format(vdi_user_info()["domain"], user, vdi_user_info()["password"]))
+            time.sleep(20)
+
+            if not wait_element(pic("_citrix_workspace_broker")):
+                if wait_element(pic("_win10_start_icon")):             # check whether auto logon vdi desktop
+                    log.info("auto logon vdi desktop success")
+                    pyautogui.click(1, 1)
                     break
                 else:
+                    log.debug("open citrix workspace broker fail",
+                              cf.get_current_dir('Test_Report', 'img', '{}.png'.format(case_name.replace(' ', '_'))))
+                    os.system("wmctrl -c 'HP - Citrix Server Error'")
+                    os.system("wmctrl -c 'Citrix Workspace'")
+                    time.sleep(5)
                     continue
             else:
-                log.error("login vdi connection fail")
-                os.system("wmctrl -c 'Citrix Workspace'")
-                multiuser.reset_key(user)
-                return [False, "login vdi connection fail"]
+                log.info("open citrix workspace broker success")
+                if not citrix.logon_desktop_by_pic():
+                    log.debug("desktops or target desktop not found",
+                              cf.get_current_dir('Test_Report', 'img', '{}.png'.format(case_name)))
+                    os.system("wmctrl -c 'HP - Citrix Server Error'")
+                    os.system("wmctrl -c 'Citrix Workspace'")
+                    time.sleep(5)
+                    continue
+                for i in range(15):
+                    log.info("wait log on citrix desktop...")
+                    time.sleep(10)
+                    if wait_element(pic("_win10_start_icon")):
+                        log.info("login vdi connection success")
+                        break
+                    else:
+                        continue
+                else:
+                    log.debug("login vdi connection fail",
+                              cf.get_current_dir('Test_Report', 'img', '{}.png'.format(case_name.replace(' ', '_'))))
+                    os.system("wmctrl -c 'HP - Citrix Server Error'")
+                    os.system("wmctrl -c 'Citrix Workspace'")
+                    time.sleep(5)
+                    continue
+                break
+        else:
+            os.system("wmctrl -c 'Citrix Workspace'")
+            multiuser.reset_key(user)
+            return [False, "login vdi connection fail"]
 
         time.sleep(5)
         screensaver = ScreenSaver()
@@ -319,7 +359,8 @@ def step_7_8(**kwargs):
         time.sleep(2)
         if wait_element(pic("_screen_lock_by_user")):
             log.error("unlock fail")
-            log.debug("unlock fail", cf.get_current_dir('Test_Report', 'img', '{}.png'.format(case_name)))
+            log.debug("unlock fail",
+                      cf.get_current_dir('Test_Report', 'img', '{}.png'.format(case_name.replace(' ', '_'))))
             screensaver.resume_screensaver_by_keyboard()
             pyautogui.screenshot(cf.get_current_dir("Test_Report/screen_lock_citrix_error.png"))
             return [False, "unlock fail"]
@@ -332,25 +373,39 @@ def step_7_8(**kwargs):
 
 def step_9(**kwargs):
     log = kwargs.get("log")
+    case_name = kwargs.get("case_name")
     user_password = kwargs.get("user_password", "1")
     try:
         pmcf.SwitchThinProMode("user")
         multiuser = vdi_connection.MultiUserManger()
-        user = multiuser.get_a_available_key()
-        if not user:
+        for _ in range(6):
+            user = multiuser.get_a_available_key()
+            if user:
+                break
+            time.sleep(180)
+        else:
             log.error("not get a valid user")
             return [False, "not has invalid user"]
         parameters = {'vdi': 'citrix', 'session': 'win10'}
         vdi = vdi_connection.CitrixLinux(user=user,
                                          setting=vdi_setting()["set"]["citrix"]["screen_lock_with_password_step3"],
                                          parameters=parameters)
-
-        if not vdi.logon(parameters.get("session", "")):
-            log.error("log on vdi fail")
-            multiuser.reset_key(user)
-            return [False, "log on vdi fail"]
-        if not wait_element(pic("_win10_start_icon")):
-            log.error("logon vdi fail")
+        for _ in range(2):
+            if vdi.logon(parameters.get("session", "")):
+                for _ in range(10):
+                    time.sleep(10)
+                    if wait_element(pic("_win10_start_icon")):
+                        break
+                else:
+                    log.debug("log on vdi fail",
+                              cf.get_current_dir('Test_Report', 'img', '{}.png'.format(case_name.replace(' ', '_'))))
+                    vdi.logoff()
+                    time.sleep(5)
+                    continue
+                break
+        else:
+            log.debug("log on vdi fail",
+                      cf.get_current_dir('Test_Report', 'img', '{}.png'.format(case_name.replace(' ', '_'))))
             multiuser.reset_key(user)
             return [False, "log on vdi fail"]
         log.info("logon vdi success")
@@ -444,7 +499,7 @@ def start(case_name, **kwargs):
     cf.update_cases_result(report_file, case_name, step1_report)
 
     log.info(" -------------------------------------------step 2")
-    result_2 = step_2(log=log)
+    result_2 = step_2(log=log, case_name=case_name)
     if not result_2[0]:
         step2_report = {'step_name': 'step2',
                         'result': 'Fail',
@@ -482,7 +537,7 @@ def start(case_name, **kwargs):
     cf.update_cases_result(report_file, case_name, step4_report)
 
     log.info(" -------------------------------------------step 5_6")
-    result_5_6 = step_5_6(log=log, session=session, root_password=root_password)
+    result_5_6 = step_5_6(log=log, session=session, root_password=root_password, case_name=case_name)
     if not result_5_6[0]:
         step6_report = {'step_name': 'step 5_6',
                         'result': 'fail',
@@ -503,7 +558,7 @@ def start(case_name, **kwargs):
     cf.update_cases_result(report_file, case_name, step6_report)
 
     log.info("-------------------------------------------step 7_8")
-    result_7_8 = step_7_8(log=log, user_password=user_password)
+    result_7_8 = step_7_8(log=log, user_password=user_password, case_name=case_name)
     if not result_7_8[0]:
         step8_report = {'step_name': 'step 7_8',
                         'result': 'fail',
@@ -524,7 +579,7 @@ def start(case_name, **kwargs):
     cf.update_cases_result(report_file, case_name, step8_report)
 
     log.info(" ------------------------------------------- step 9")
-    result_9 = step_9(log=log, user_password=user_password)
+    result_9 = step_9(log=log, user_password=user_password, case_name=case_name)
     if not result_9[0]:
         step9_report = {'step_name': 'step9',
                         'result': 'fail',

@@ -10,6 +10,8 @@ from Common.exception import IconNotExistError
 import os
 from Test_Script.ts_power_manager import screensaver
 from Test_Script.ts_power_manager.common_function import SwitchThinProMode
+from Common import log
+log = log.Logger()
 
 
 def check_default_status(**status):
@@ -125,14 +127,18 @@ def check_require_passwoed_for_general_user():
     return res
 
 
-def wait_and_check_screen_saver(t=58):
+def wait_and_check_screen_saver(t=55):
+    log.info("start wait time")
     for i in range(9):
         time.sleep(t)
         if linux_check_locked():
+            log.error("current loop times {}".format(i))
             break
     else:
-        time.sleep(t + 25)
-        return linux_check_locked()
+        time.sleep(t + 35)
+        flag = linux_check_locked()
+        log.info("check screen lock result:{}".format(flag))
+        return flag
     return False
 
 

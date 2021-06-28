@@ -1,6 +1,7 @@
 import os
 import time
 import pyautogui
+pyautogui.FAILSAFE = False
 import subprocess
 from Common import common_function, vdi_connection
 from Common.file_operator import YamlOperator
@@ -44,13 +45,12 @@ class ScreenLockPassword:
         :param: user_mode: e.g. 'admin' or 'user'
         '''
         if user_mode == 'admin':
-            switch_result = SwitchThinProMode('admin')
+            return SwitchThinProMode('admin')
         elif user_mode == 'user':
-            switch_result = SwitchThinProMode('user')
+            return SwitchThinProMode('user')
         else:
             self.log.info('invalid user_mode {}'.format(user_mode))
             return False
-        return switch_result
 
     def set_user_password(self, **kwargs):
         password = kwargs.get("password", "1")
@@ -83,9 +83,17 @@ class ScreenLockPassword:
             subprocess.getoutput("mclient --quiet set root/screensaver/lockScreenUser 1 && mclient commit")
 
     def create_vdi_rdp(self, step_No):
-        self.user = vdi_connection.MultiUserManger().get_a_available_key()
+        for _ in range(6):
+            self.user = vdi_connection.MultiUserManger().get_a_available_key()
+            if self.user:
+                break
+            time.sleep(180)
         self.log.info('user: {}'.format(self.user))
-        self.rdp_server = vdi_connection.MultiUserManger().get_a_available_key('rdp win10')
+        for _ in range(6):
+            self.rdp_server = vdi_connection.MultiUserManger().get_a_available_key('rdp win10')
+            if self.rdp_server:
+                break
+            time.sleep(180)
         self.log.info('rdp_server: {}'.format(self.rdp_server))
         setting_file = os.path.join(self.path, "Test_Data", "td_common", "thinpro_registry.yml")
         setting_rdp = YamlOperator(setting_file).read()["set"]["RDP"]
@@ -103,14 +111,16 @@ class ScreenLockPassword:
         return connect_result
 
     def logoff_vdi_rdp(self):
+        res = subprocess.getoutput("wmctrl -lx | grep -i '{}'".format(self.vdi.grep))
+        self.log.info("vdi window:{}".format(res))
         logoff_result = self.vdi.logoff()
         time.sleep(2)
         self.reset_key(self.user, key='user')
         self.reset_key(self.rdp_server, key='rdp win10')
         return logoff_result
 
-    @staticmethod
-    def reset_key(user, key):
+    def reset_key(self, user, key):
+        self.log.info('start reset user: {}'.format(user))
         vdi_connection.MultiUserManger().reset_key(user, key)
 
     def lock_screen(self, passw=True, locked_by='normal'):
@@ -155,11 +165,14 @@ class ScreenLockPassword:
             common_function.update_cases_result(report_file, case_name, step)
             return True
         else:
+            rdp_id = self.vdi.vdi_connection_id('freerdp')[0]
+            share_credential = subprocess.getoutput(
+                "mclient --quiet get root/ConnectionType/freerdp/connections/{}/SingleSignOn".format(rdp_id))
             step = {'step_name': 'Check unlock result for vdi rdp',
                      'result': 'Fail',
                      'expect': 'Unlock vdi rdp successfully.',
                      'actual': 'Fail to unlock vdi rdp.',
-                     'note': 'none'}
+                     'note': 'share credentials with screensaver: {}'.format(share_credential)}
             common_function.update_cases_result(report_file, case_name, step)
             return False
 
@@ -235,9 +248,15 @@ def start(case_name, **kwargs):
     log.info('-------------Start step 1 & 2-------------------')
     scr_lock_passw.set_screen_saver()
     if not scr_lock_passw.switch_user('user'):
+        log.error('switch to user fail')
         return False
     scr_lock_passw.create_vdi_rdp('step1&2')
-    if scr_lock_passw.connect_vdi_rdp() is not True:
+    for _ in range(2):
+        if scr_lock_passw.connect_vdi_rdp() is True:
+            break
+        log.debug('connect vdi rdp for step 1&2 fail,try again',
+                  common_function.get_current_dir("Test_Report", "img", "{}.png".format(case_name.replace(' ', '_'))))
+    else:
         step = {'step_name': 'Connect vdi rdp for step 1&2',
                  'result': 'Fail',
                  'expect': 'Vdi rdp should be connected.',
@@ -258,7 +277,32 @@ def start(case_name, **kwargs):
     pyautogui.click()
     time.sleep(2)
     if not scr_lock_passw.step_unlock_result(report_file, case_name):
-        scr_lock_passw.logoff_vdi_rdp()
+        log.debug("try to unlock vdi screen",
+                  common_function.get_current_dir("Test_Report", "img", "{}.png".format(case_name.replace(' ', '_'))))
+        pyautogui.click()
+        screen = scr_lock_passw.wait_pictures('_lock_screen')
+        if screen:
+            passw = scr_lock_passw.vdi_user_info["password"]
+            pyautogui.typewrite(passw, interval=0.1)
+            pyautogui.press("enter")
+            time.sleep(2)
+            if screen:
+                pyautogui.press("enter")
+                time.sleep(1)
+                pyautogui.click()
+                time.sleep(1)
+                pyautogui.press("esc")
+                time.sleep(2)
+                pyautogui.click()
+                time.sleep(2)
+                pyautogui.typewrite('1')
+                pyautogui.press("enter")
+                time.sleep(2)
+            scr_lock_passw.logoff_vdi_rdp()
+        else:
+            scr_lock_passw.logoff_vdi_rdp()
+            time.sleep(20)
+            pyautogui.click()
         return False
     if not scr_lock_passw.step_logoff(report_file, case_name):
         return False
@@ -272,7 +316,12 @@ def start(case_name, **kwargs):
     time.sleep(2)
     log.info('-------------Start step 3 & 4-------------------')
     scr_lock_passw.create_vdi_rdp('step3&4')
-    if scr_lock_passw.connect_vdi_rdp() is not True:
+    for _ in range(2):
+        if scr_lock_passw.connect_vdi_rdp() is True:
+            break
+        log.debug('connect vdi rdp for step 3&4 fail,try again',
+                  common_function.get_current_dir("Test_Report", "img", "{}.png".format(case_name.replace(' ', '_'))))
+    else:
         step = {'step_name': 'Connect vdi rdp for step 3&4',
                  'result': 'Fail',
                  'expect': 'Vdi rdp should be connected.',
@@ -321,19 +370,25 @@ def start(case_name, **kwargs):
            'address': rdp_server,
            'SingleSignOn': '1'}
     rdp.set_vdi(rdp_id, dic)
-    rdp.connect_vdi(rdp_id)
-    log.info("Launch RDP Login dialog.")
-    time.sleep(5)
-    pyautogui.typewrite(user)
-    time.sleep(1)
-    pyautogui.hotkey('tab')
-    time.sleep(1)
-    pyautogui.typewrite(passw)
-    time.sleep(1)
-    pyautogui.hotkey('enter')
-    time.sleep(10)
-    screen = scr_lock_passw.wait_pictures('_win10_start_icon')
-    if not screen:
+    # rdp.connect_vdi(rdp_id)
+    for _ in range(2):
+        rdp.connect_vdi_by_pic()
+        log.info("Launch RDP Login dialog.")
+        time.sleep(5)
+        pyautogui.typewrite(user)
+        time.sleep(1)
+        pyautogui.hotkey('tab')
+        time.sleep(1)
+        pyautogui.typewrite(passw)
+        time.sleep(1)
+        pyautogui.hotkey('enter')
+        time.sleep(10)
+        screen = scr_lock_passw.wait_pictures('_win10_start_icon')
+        if screen:
+            break
+        log.debug('connect vdi rdp for step 5&6 fail,try again',
+                  common_function.get_current_dir("Test_Report", "img", "{}.png".format(case_name.replace(' ', '_'))))
+    else:
         step = {'step_name': 'Connect vdi rdp for step 5&6',
                  'result': 'Fail',
                  'expect': 'Vdi rdp should be connected.',
@@ -431,7 +486,12 @@ def start(case_name, **kwargs):
     time.sleep(2)
     log.info('-------------Start step 9-------------------')
     scr_lock_passw.create_vdi_rdp('step3&4')
-    if scr_lock_passw.connect_vdi_rdp() is not True:
+    for _ in range(2):
+        if scr_lock_passw.connect_vdi_rdp() is True:
+            break
+        log.debug('connect vdi rdp for step 9 fail,try again',
+                  common_function.get_current_dir("Test_Report", "img", "{}.png".format(case_name.replace(' ', '_'))))
+    else:
         step = {'step_name': 'Connect vdi rdp for step 9',
                  'result': 'Fail',
                  'expect': 'Vdi rdp should be connected.',

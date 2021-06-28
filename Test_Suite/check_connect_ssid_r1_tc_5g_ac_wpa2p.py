@@ -7,6 +7,13 @@ from Common import common_function as cf
 from Test_Script.ts_network import network_setting, network
 
 
+def del_cer(file_name):
+    folder = subprocess.getoutput("ls /media")
+    path = f'/media/{folder}/{file_name}'
+    if os.path.exists(path):
+        os.remove(path)
+
+
 def connect_wireless(ssid):
     try:
         log.info("start connect wireless {}".format(ssid))
@@ -14,12 +21,32 @@ def connect_wireless(ssid):
         wireless.open_network()
         wireless.switch_to_wireless_tab()
         wireless.add(ssid=ssid)
+        del_cer("ROOTCA.cer")
+        del_cer("802.1X.pfx")
         wireless.apply_and_ok()
         wireless.apply()
         wireless.close_control_panel()
         return True
     except:
         log.error(traceback.format_exc())
+        return False
+
+
+def find_file(file_name):
+    folder = subprocess.getoutput("ls /media")
+    result = subprocess.getoutput(f"find /media/{folder} -type f -iname '{file_name}'")
+    if result:
+        if '\n' in result:
+            path = result.split('\n')[0].strip()
+        else:
+            path = result.strip()
+        path = path.replace(" ", "\ ")
+        log.info(f'found the file {file_name} in {path}')
+        if len(path.strip('/').split('/')) > 3:
+            subprocess.getoutput(f'cp -r {path} /media/{folder}/')
+        return True
+    else:
+        log.info(f'not found the file {file_name} in /media/{folder}')
         return False
 
 
@@ -34,15 +61,25 @@ def step_1_2(**kwargs):
     wireless = network_setting.Wireless()
     wireless.close_control_panel()
     if not wireless.check_wireless_card():
-        log.error("not found the wireless card on thin client")
-        report = {'step_name': 'check wireless card',
-                  'result': 'fail',
-                  'expect': "thin client has wireless card",
-                  'actual': "not found wireless card on thin client",
-                  'note': ''}
-        cf.update_cases_result(report_file, case_name, report)
-        log.error("{:+^80}".format("test case fail"))
-        return False
+        try:
+            wireless.restore_wireless()
+        except Exception as e:
+            log.error(traceback.print_exc())
+            traceback.print_exc()
+            raise e
+        finally:
+            wireless.close_control_panel()
+        time.sleep(3)
+        if not wireless.check_wireless_card():
+            log.error("not found the wireless card on thin client")
+            report = {'step_name': 'check wireless card',
+                      'result': 'fail',
+                      'expect': "thin client has wireless card",
+                      'actual': "not found wireless card on thin client",
+                      'note': ''}
+            cf.update_cases_result(report_file, case_name, report)
+            log.error("{:+^80}".format("test case fail"))
+            return False
     ssid_list = ["R1-Linux-5N_thinpro_store", "R1-Linux-5N_ssl_store", "R1-Linux-AC"]
     if ssid in ssid_list:                                         # import ROOTCA.cer
         if not cf.import_cert():
@@ -54,13 +91,11 @@ def step_1_2(**kwargs):
                       'note': ''}
             cf.update_cases_result(report_file, case_name, report)
             log.error("{:+^80}".format("test case fail"))
+            wireless.restore_wireless()
             return False
     if ssid == "R1-Linux-2.4N":
-        folder = subprocess.getoutput("ls /media")
-        rootca_path = os.path.join("/media", folder, "Certs", "ROOTCA.cer")
-        cert_8021x = os.path.join("/media", folder, "Certs", "802.1X.pfx")
-        if not os.path.exists(rootca_path) or not os.path.exists(cert_8021x):
-            log.error("not found the cert 'ROOTCA.cer' or '802.1X.pfx' in /media/{}/Certs".format(format(folder)))
+        if not find_file("ROOTCA.cer") or not find_file("802.1X.pfx"):
+            log.error("not found the cert 'ROOTCA.cer' or '802.1X.pfx' in /media/")
             report = {'step_name': "check cert 'ROOTCA.cer' and '802.1X.pfx'",
                       'result': 'fail',
                       'expect': "found 'ROOTCA.cer' and '802.1X.pfx' in USB store",
@@ -68,6 +103,7 @@ def step_1_2(**kwargs):
                       'note': ''}
             cf.update_cases_result(report_file, case_name, report)
             log.error("{:+^80}".format("test case fail"))
+            wireless.restore_wireless()
             return False
 
     wired = network_setting.Wired()
@@ -91,6 +127,7 @@ def step_1_2(**kwargs):
                   'actual': "connect wireless fail, time out",
                   'note': ''}
         cf.update_cases_result(report_file, case_name, report)
+        wireless.restore_wireless()
         return False
 
     for i in range(24):
@@ -110,6 +147,7 @@ def step_1_2(**kwargs):
         wireless.del_wireless_profile_from_reg()
         wired.set_wired_connection_priority()
         log.error("{:+^80}".format("test case fail"))
+        wireless.restore_wireless()
         return False
     report = {'step_name': 'connect wireless',
               'result': 'Pass',
@@ -128,6 +166,7 @@ def step_1_2(**kwargs):
         wireless.del_wireless_profile_from_reg()
         wired.set_wired_connection_priority()
         log.error("{:+^80}".format("test case fail"))
+        wireless.restore_wireless()
         return False
     report = {'step_name': 'ping "15.83.240.98"',
               'result': 'pass',
@@ -165,6 +204,7 @@ def step_3_4(**kwargs):
         wireless.del_wireless_profile_from_reg()
         wired.set_wired_connection_priority()
         log.error("{:+^80}".format("test case fail"))
+        wireless.restore_wireless()
         return False
     report = {'step_name': 'check wireless status',
               'result': 'pass',
@@ -187,6 +227,7 @@ def step_3_4(**kwargs):
         cf.update_cases_result(report_file, case_name, report)
         wired.set_wired_connection_priority()
         log.error("{:+^80}".format("test case fail"))
+        wireless.restore_wireless()
         return False
     report = {'step_name': 'check wireless status',
               'result': 'pass',

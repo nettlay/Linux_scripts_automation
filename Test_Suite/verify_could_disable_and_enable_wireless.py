@@ -6,7 +6,7 @@ from Test_Script.ts_network import network_setting
 from Common import common_function as cf
 from Common.picture_operator import wait_element
 from Common.log import *
-
+import traceback
 steps_list = ("disable_wireless", "enable_wireless", "enable_wireless_after_reboot")
 
 
@@ -21,8 +21,17 @@ def step_1(**kwargs):
     log.info("start prepare the pre_condition")
     wireless = network_setting.Wireless()  # check wireless card
     if not wireless.check_wireless_card():
-        log.error("not found wireless card on thin client")
-        return [False, "not found wireless card on thin client"]
+        try:
+            restore_wireless()
+        except Exception as e:
+            log.error(traceback.print_exc())
+            traceback.print_exc()
+        finally:
+            wireless.close_control_panel()
+        time.sleep(3)
+        if not wireless.check_wireless_card():
+            log.error("not found wireless card on thin client")
+            return [False, "found wireless card  but not found wlan0 on thin client"]
 
     wired = network_setting.Wired()
     if wired.check_wired_is_connected():
@@ -61,19 +70,23 @@ def step_1(**kwargs):
     add_edit_del = wait_element(pic("_gray_add_edit_del"), rate=0.99)
     if not add_edit_del:
         log.error("add, edit, delete not is gray")
+        restore_wireless()
         return [False, "add, edit, delete not is gray"]
     log.info("add, edit, delete is gray")
     wireless.close_control_panel()
     if wireless.check_wireless_connected():
         log.error("wireless is connected")
+        restore_wireless()
         return [False, "wireless is connected"]
     log.info("wireless is disconnected")
     if wait_element(pic("_systray_not_connect")):
         log.error("systray wireless icon is exist")
+        restore_wireless()
         return [False, "systray wireless icon is exist"]
     wlan0 = subprocess.getoutput("ifconfig | grep -i wlan0")
     if wlan0:
         log.error("found the 'wlan0' use command 'ifconfig'")
+        restore_wireless()
         return [False, "found the 'wlan0' use command 'ifconfig'"]
     log.info("systray wireless icon is not exist")
     log.info("start reboot")
@@ -89,7 +102,8 @@ def step_2_1():
     log.info("start check whether wireless is connected after reboot")
     if wireless.check_wireless_connected():
         log.error("wireless is connected after reboot")
-        return [False, "wireless is connected after reboot"]
+        return [False, "Known issues: At Condition(disable eth0) and Reboot, "
+                       "you can find wlan0 in terminal use command: ifconfig"]
     log.info("wireless is disconnected after reboot")
 
     log.info("start check wireless systray icon")
@@ -189,6 +203,15 @@ def restore():
         wired.enable_eth0()
 
 
+def restore_wireless():
+    wireless = network_setting.Wireless()
+    wireless.open_network()
+    wireless.switch_to_wireless_tab()
+    wireless.enable_wireless()
+    wireless.apply()
+    wireless.close_control_panel()
+
+
 def disable_wireless(*args, **kwargs):
     report_file = kwargs.get("report_file")
     case_name = kwargs.get("case_name")
@@ -226,6 +249,7 @@ def enable_wireless(*args, **kwargs):
                          'note': '{}'.format(step_2_result[1])}
         cf.update_cases_result(report_file, case_name, step_2_report)
         restore()
+        restore_wireless()
         log.error("{:+^80}".format("test case fail"))
         return False
     step_2_report = {'step_name': 'step_2 enable wireless',
@@ -251,6 +275,7 @@ def enable_wireless_after_reboot(**kwargs):
                          'note': '{}'.format(after_reboot_result[1])}
         cf.update_cases_result(report_file, case_name, step_2_report)
         restore()
+        restore_wireless()
         log.error("{:+^80}".format("test case fail"))
         return False
     step_2_report = {'step_name': 'step_2 enable wireless',
@@ -265,7 +290,7 @@ def enable_wireless_after_reboot(**kwargs):
 
 
 def start(case_name, **kwargs):
-    report_file = os.path.join(cf.get_current_dir(), "Test_Report", "{}.yaml".format(cf.check_ip_yaml()))
+    report_file = cf.get_current_dir("Test_Report", "{}.yaml".format(cf.check_ip_yaml()))
     cf.new_cases_result(report_file, case_name)
 
     cf.case_steps_run_control(steps_list, __name__, case_name=case_name, report_file=report_file)

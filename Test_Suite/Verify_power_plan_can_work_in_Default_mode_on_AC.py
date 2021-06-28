@@ -52,13 +52,12 @@ def start(case_name, **kwargs):
             common_function.update_cases_result(result_file, case_name, steps)
             log.info('case {} is end'.format(case_name))
             return False
-        with PrepareWakeUp(time=1800) as w:
-            time_gap = w.get_max_time_gap()
-            w.wait(1800)
+        with PrepareWakeUp(time=1810) as w:
+            w.wait(1810)
         to_os = ScreenSaver()
         to_os.resume_lock_screen_by_mouse()
-        last_time_gap = w.get_max_time_gap()
-        if time_gap <= 5 < last_time_gap:
+        last_time_gap = int(w.get_max_time_gap())
+        if last_time_gap > 5:
             steps = {
                 'step_name': 'check the os go to verify_s3_work afer 30 minutes',
                 'result': 'Pass',
@@ -72,7 +71,7 @@ def start(case_name, **kwargs):
                 'result': 'Fail',
                 'expect': 'sleep',
                 'actual': 'it is not go to sleep',
-                'note': ''}
+                'note': 'time gap: {}, must more than 5'.format(last_time_gap)}
             common_function.update_cases_result(result_file, case_name, steps)
             return False
         if last_time_gap > 5:
@@ -95,6 +94,6 @@ def start(case_name, **kwargs):
     except:
         log.error(traceback.format_exc())
         error_pic = os.path.join(common_function.get_current_dir(),
-                                 r'Test_Report', 'img', '{}.png'.format(case_name))
+                                 r'Test_Report', 'img', '{}.png'.format(case_name.replace(' ', '_')))
         capture_screen(error_pic)
         pass

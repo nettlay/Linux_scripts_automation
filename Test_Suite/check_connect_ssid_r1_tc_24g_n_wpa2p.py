@@ -25,12 +25,14 @@ def connect_wireless(ssid):
 
 
 def stop_network():
-    log.info("stop network from network systray icon")
-    nw = wait_element(cf.get_current_dir("Test_Data/td_network/wired/_wired_connect_systray"))
-    if not nw:
-        log.error("not found network systray icon")
-        return False
-    pyautogui.click(nw[0])
+    for i in range(2):
+        log.info("stop network from network systray icon")
+        nw = wait_element(cf.get_current_dir("Test_Data/td_network/wired/_wired_connect_systray"))
+        if not nw:
+            log.error("not found network systray icon")
+            continue
+        pyautogui.click(nw[0])
+        break
     stop = wait_element(cf.get_current_dir("Test_Data/td_network/wired/_systray_stop"))
     if not stop:
         log.error("not found network systray stop icon")
@@ -192,8 +194,18 @@ def start(case_name, **kwargs):
     cf.update_cases_result(report_file, case_name, report)
 
     log.info("set 'root/Network/disableLeftClickMenu' is 0")
-    os.system("mclient --quiet set root/Network/disableLeftClickMenu 0")
-    os.system("mclient commit")
+    for i in range(2):
+        os.system("mclient --quiet set root/Network/disableLeftClickMenu 0")
+        time.sleep(2)
+        os.system("mclient commit")
+        time.sleep(5)
+        disableLeftvalue = os.system("mclient --quiet get root/Network/disableLeftClickMenu")
+        if disableLeftvalue == 0:
+            log.info("disableLeftvalue edit successful")
+            break
+        else:
+            log.info("disableLeftvalue edit fail")
+            continue
     time.sleep(1)
 
     if not stop_network():                                                  # stop network

@@ -10,6 +10,8 @@ from Test_Script.ts_power_manager.common_function import SwitchThinProMode
 from Common.common_function import new_cases_result, update_cases_result
 from Common.picture_operator import capture_screen
 import pyautogui
+pyautogui.FAILSAFE = False
+from PIL import Image
 
 log = log.Logger()
 
@@ -47,36 +49,46 @@ def click_icon(lis):
     log.info('check icon and click')
     path = os.path.join(common_function.get_current_dir(), 'Test_Data', 'td_power_manager', 'verify_s3_work')
     for i in lis:
-        power_icon = picture_operator.wait_element(os.path.join(path, i), offset=(10, 10))
+        power_icon = picture_operator.wait_element(os.path.join(path, i), offset=(20, 10))
         tool.click(power_icon[0][0], power_icon[0][1], 1)
 
 
 def sleep_desktop():
     log.info('sleep by right click desktop')
     tool.right_click(300, 300, 1)
-    try:
-        click_icon(['power', 'sleep'])
-    except:
-        time.sleep(1)
-        pyautogui.press("up", interval=0.5)
-        pyautogui.press("enter", interval=0.5)
-        pyautogui.press("down", interval=0.5)
-        pyautogui.press("enter", interval=0.5)
-        pyautogui.press("enter", interval=0.5)
+    # try:
+    #     click_icon(['power', 'sleep'])
+    # except:
+    time.sleep(1)
+    pyautogui.press("up", interval=0.5)
+    pyautogui.press("enter", interval=0.5)
+    pyautogui.press("down", interval=0.5)
+    pyautogui.press("enter", interval=0.5)
+    pyautogui.press("enter", interval=0.5)
+    time.sleep(10)
 
 
 def sleep_start_menu():
     log.info('sleep by start menu')
-    pyautogui.moveTo(1, 1)
-    time.sleep(3)
-    pyautogui.hotkey('ctrl', 'alt', 's')
-    try:
-        click_icon(['power', 'sleep'])
-    except:
-        time.sleep(1)
-        pyautogui.press("up", interval=0.5)
-        pyautogui.press("right", interval=0.5)
-        pyautogui.press("enter", interval=0.5)
+    # pyautogui.moveTo(1, 1)
+    for _ in range(3):
+        time.sleep(3)
+        pyautogui.hotkey('ctrl', 'alt', 's')
+        path = os.path.join(common_function.get_current_dir(), 'Test_Data', 'td_power_manager', 'verify_s3_work')
+        power_icon = picture_operator.wait_element(os.path.join(path, 'power'))
+        if power_icon:
+            break
+    else:
+        log.warning("power menu in start not found")
+        return False
+    # try:
+    #     click_icon(['power', 'sleep'])
+    # except:
+    time.sleep(1)
+    pyautogui.press("up", interval=0.5)
+    pyautogui.press("right", interval=0.5)
+    pyautogui.press("enter", interval=0.5)
+    time.sleep(10)
 
 
 def sleep_method1():
@@ -86,9 +98,8 @@ def sleep_method1():
         power_manager.AC.open_power_manager_from_control_panel()
         power_manager.AC.switch()
         power_manager.AC.set(pms=pms.AC.Minutes_before_system_sleep, radio="on", text="{}".format('1'))
-        power_manager.AC.apply()
-        time.sleep(5)
-        with PrepareWakeUp(time=60) as w:
+        with PrepareWakeUp(time=80) as w:
+            power_manager.AC.apply()
             w.wait(60)
         to_os = ScreenSaver()
         to_os.resume_lock_screen_by_mouse()
@@ -174,7 +185,7 @@ def start(case_name, **kwargs):
             update_cases_result(result_file, case_name, steps)
         else:
             error_pic = os.path.join(common_function.get_current_dir(),
-                                     r'Test_Report', 'img', '{}+sleep_by_desktop.png'.format(case_name))
+                                     r'Test_Report', 'img', '{}+sleep_by_desktop.png'.format(case_name.replace(' ', '_')))
             capture_screen(error_pic)
             steps = {
                 'step_name': 'check tc go to sleep by desktop',
@@ -192,11 +203,11 @@ def start(case_name, **kwargs):
                 'result': 'Pass',
                 'expect': 'sleep',
                 'actual': 'TC go to sleep',
-                'note': ''}
+                'note': 'sleep time: {}'.format(last_time_gap)}
             update_cases_result(result_file, case_name, steps)
         else:
             error_pic = os.path.join(common_function.get_current_dir(),
-                                     r'Test_Report', 'img', '{}+sleep_by_start_menu.png'.format(case_name))
+                                     r'Test_Report', 'img', '{}+sleep_by_start_menu.png'.format(case_name.replace(' ', '_')))
             capture_screen(error_pic)
             steps = {
                 'step_name': 'check tc go to sleep by start menu',
@@ -211,7 +222,7 @@ def start(case_name, **kwargs):
     except:
         log.error(traceback.format_exc())
         error_pic = os.path.join(common_function.get_current_dir(),
-                                   r'Test_Report', 'img', '{}.png'.format(case_name))
+                                   r'Test_Report', 'img', '{}.png'.format(case_name.replace(' ', '_')))
         capture_screen(error_pic)
         os.system("wmctrl -c 'Control Panel'")
         pass

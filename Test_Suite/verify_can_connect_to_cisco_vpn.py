@@ -155,6 +155,32 @@ class CiscoVPN:
             pyautogui.hotkey('enter')
             time.sleep(1)
 
+    def find_vpn_connection_error(self, wait=60):
+        count = 0
+        now_time = time.time()
+        time_gap = 0
+        while time_gap <= wait and count < 2:
+            time_gap = time.time() - now_time
+            result = self.wait_pictures("vpn_error")
+            if not result:
+                time.sleep(3)
+                continue
+            count += 1
+            button_pos = self.wait_pictures("ok")
+            if button_pos and count < 2:
+                pyautogui.click(result[0])
+            elif count < 2:
+                pyautogui.hotkey('enter')
+            else:
+                pyautogui.hotkey("right")
+                time.sleep(2)
+                pyautogui.hotkey('enter')
+            time.sleep(5)
+        if count < 2:
+            return False
+        self.log.info("Find Error Times: {}".format(count))
+        return True
+
 
 cisco_vpn = CiscoVPN()
 
@@ -188,7 +214,9 @@ def configure_cisco_vpn(**kwargs):
 def check_configure_cisco_vpn_result(**kwargs):
     log = kwargs.get("log")
     log.info('start check_configure_cisco_vpn_result')
-    check_result = cisco_vpn.check_vpn_result()
+    check_result = False
+    if not cisco_vpn.find_vpn_connection_error():
+        check_result = cisco_vpn.check_vpn_result()
     update_case_result(check_result, 'check_configure_cisco_vpn_result', **kwargs)
     if not check_result:
         cisco_vpn.deal_with_popup_dialog('cisco_vpn_connection_error', 'after_check_cisco_vpn')
@@ -204,7 +232,9 @@ def reboot(**kwargs):
 def check_cisco_vpn_result_reboot(**kwargs):
     log = kwargs.get("log")
     log.info('start check_cisco_vpn_result_reboot')
-    check_result = cisco_vpn.check_vpn_result()
+    check_result = False
+    if not cisco_vpn.find_vpn_connection_error():
+        check_result = cisco_vpn.check_vpn_result()
     update_case_result(check_result, 'check_cisco_vpn_result_reboot', **kwargs)
     if not check_result:
         cisco_vpn.deal_with_popup_dialog('cisco_vpn_connection_error', 'after_check_cisco_vpn_reboot')
@@ -259,7 +289,9 @@ def input_credential(**kwargs):
 def check_cisco_vpn_result_valid_credential(**kwargs):
     log = kwargs.get("log")
     log.info('start check_cisco_vpn_result_valid_credential')
-    check_result = cisco_vpn.check_vpn_result()
+    check_result = False
+    if not cisco_vpn.find_vpn_connection_error():
+        check_result = cisco_vpn.check_vpn_result()
     update_case_result(check_result, 'check_cisco_vpn_result_valid_credential', **kwargs)
     # # In case connection error
     # cisco_vpn.deal_with_popup_dialog('cisco_vpn_connection_error')

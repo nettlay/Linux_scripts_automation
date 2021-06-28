@@ -83,6 +83,10 @@ def start(case_name, **kwargs):
         if wired.check_wired_is_connected():
             break
         time.sleep(2)
+    log.info("set 'root/Network/userLockEngaged' is 0")
+    os.system("mclient --quiet set root/Network/userLockEngaged 0")
+    os.system("mclient commit")
+    time.sleep(1)
     log.info("{:+^80}".format("test case pass"))
     return True
 

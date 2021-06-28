@@ -62,7 +62,13 @@ def set_image_tile(power_m, path):
 
 def lock_screen():
     log.info('lock the screen')
-    pyautogui.hotkey('ctrl', 'alt', 'l')
+    path = common_function.get_current_dir('Test_Data', 'td_power_manager', 'desktop')
+    for _ in range(3):
+        pyautogui.hotkey('ctrl', 'alt', 'l')
+        time.sleep(2)
+        if not wait_element(path):
+            break
+        time.sleep(2)
 
 
 def locked_wake_up():
@@ -93,6 +99,7 @@ def get_defaule():
 
 
 def reset_settings(lis):
+    os.popen("hptc-control-panel --term")
     os.system("mclient --quiet set root/screensaver/enableCustomLogo {}".format(lis[0]))
     os.system("mclient --quiet set root/screensaver/logoPath {}".format(lis[1]))
     os.system("mclient --quiet set root/screensaver/mode {}".format(lis[2]))
@@ -150,19 +157,27 @@ def step1(power_m, size, size1):
         power_m.ScreenSaver.apply()
         time.sleep(5)
         lock_screen()
-        time.sleep(5)
         img21, size21 = open_pic(pic_cut('2', '1'))
         data21 = get_pic_color(img21, get_xy(size, size21))
         log.info(data21)
-        time.sleep(25)
-        img22, size22 = open_pic(pic_cut('2', '2'))
-        data22 = get_pic_color(img22, get_xy(size1, size22))
+        for _ in range(3):
+            time.sleep(5)
+            img22, size22 = open_pic(pic_cut('2', '2'))
+            data22 = get_pic_color(img22, get_xy(size1, size22))
+            if data21 != data22:
+                break
+        else:
+            time.sleep(5)
+            img22, size22 = open_pic(pic_cut('2', '2'))
+            data22 = get_pic_color(img22, get_xy(size1, size22))
         log.info(data22)
         locked_wake_up()
         time.sleep(5)
         return data21, data22
     except:
-        log.warning(traceback.format_exc())
+        log.debug(traceback.format_exc(),
+                  common_function.get_current_dir('Test_Report', 'img', 'different_image_slideshow.png'))
+        power_m.ScreenSaver.apply()
         power_m.close_all_power_manager()
         return None
 
@@ -173,19 +188,27 @@ def step2(power_m):
         power_m.ScreenSaver.apply()
         time.sleep(5)
         lock_screen()
-        time.sleep(5)
         img21, size21 = open_pic(pic_cut('3', '1'))
         data21 = get_pic_color(img21, get_xy(size21))
         log.info(data21)
-        time.sleep(25)
-        img22, size22 = open_pic(pic_cut('3', '2'))
-        data22 = get_pic_color(img22, get_xy(size22))
+        for _ in range(3):
+            time.sleep(5)
+            img22, size22 = open_pic(pic_cut('3', '2'))
+            data22 = get_pic_color(img22, get_xy(size22))
+            if data21 != data22:
+                break
+        else:
+            time.sleep(5)
+            img22, size22 = open_pic(pic_cut('3', '2'))
+            data22 = get_pic_color(img22, get_xy(size22))
         log.info(data22)
         locked_wake_up()
         time.sleep(5)
         return data21, data22
     except:
-        log.warning(traceback.format_exc())
+        log.debug(traceback.format_exc(),
+                  common_function.get_current_dir('Test_Report', 'img', 'different_image_slideshowstretch.png'))
+        power_m.ScreenSaver.apply()
         power_m.close_all_power_manager()
         return None
 
@@ -199,7 +222,9 @@ def step3(power_m, num):
         res = wait_element(template_pic_path(num))
         return res
     except:
-        log.warning(traceback.format_exc())
+        log.debug(traceback.format_exc(),
+                  common_function.get_current_dir('Test_Report', 'img', 'different_image_center.png'))
+        power_m.ScreenSaver.apply()
         power_m.close_all_power_manager()
         return None
 
@@ -218,7 +243,9 @@ def step4(power_m, size):
         time.sleep(5)
         return data
     except:
-        log.warning(traceback.format_exc())
+        log.debug(traceback.format_exc(),
+                  common_function.get_current_dir('Test_Report', 'img', 'different_image_expand.png'))
+        power_m.ScreenSaver.apply()
         power_m.close_all_power_manager()
         return None
 
@@ -238,7 +265,9 @@ def step5(power_m):
         log.info(data1)
         return data1
     except:
-        log.warning(traceback.format_exc())
+        log.debug(traceback.format_exc(),
+                  common_function.get_current_dir('Test_Report', 'img', 'different_image_stretch.png'))
+        power_m.ScreenSaver.apply()
         power_m.close_all_power_manager()
         return None
 
@@ -253,7 +282,9 @@ def step6(power_m, num):
         time.sleep(2)
         return res
     except:
-        log.warning(traceback.format_exc())
+        log.debug(traceback.format_exc(),
+                  common_function.get_current_dir('Test_Report', 'img', 'different_image_tile.png'))
+        power_m.ScreenSaver.apply()
         power_m.close_all_power_manager()
         return None
 
@@ -284,7 +315,11 @@ def start(case_name, **kwargs):
             power_m.open_power_manager_from_control_panel()
         power_m.ScreenSaver.switch()
         data1, data2 = step1(power_m, source_size1, source_size2)
-        if data1 == source_data1 and data2 == source_data2:
+        log.info(f"data1 type: {type(data1)}")
+        log.info(f"source data1 type: {type(source_data1)}")
+        log.info([data1, data2])
+        log.info([source_data1, source_data2])
+        if [data1, data2] == [source_data1, source_data2] or [data2, data1] == [source_data1, source_data2]:
             steps = {
                 'step_name': 'verify new slideshow',
                 'result': 'Pass',
@@ -293,6 +328,8 @@ def start(case_name, **kwargs):
                 'note': ''}
             update_cases_result(result_file, case_name, steps)
         else:
+            log.debug("picture not match",
+                      common_function.get_current_dir('Test_Report', 'img', '{}_slideshow.png'.format(case_name.replace(' ', '_'))))
             steps = {
                 'step_name': 'verify new slideshow',
                 'result': 'Fail',
@@ -303,7 +340,11 @@ def start(case_name, **kwargs):
             reset_settings(value_ls)
             return False
         data3, data4 = step2(power_m)
-        if data3 == source_data1 and data4 == source_data2:
+        log.info(f"data3 type: {type(data3)}")
+        log.info(f"source data1 type: {type(source_data1)}")
+        log.info([data3, data4])
+        log.info([source_data1, source_data2])
+        if [data3, data4] == [source_data1, source_data2] or [data4, data3] == [source_data1, source_data2]:
             steps = {
                 'step_name': 'verify new slideshowstretch',
                 'result': 'Pass',
@@ -312,6 +353,8 @@ def start(case_name, **kwargs):
                 'note': ''}
             update_cases_result(result_file, case_name, steps)
         else:
+            log.debug("picture not match",
+                      common_function.get_current_dir('Test_Report', 'img', '{}_slideshowstretch.png'.format(case_name.replace(' ', '_'))))
             steps = {
                 'step_name': 'verify new slideshow',
                 'result': 'Fail',
@@ -331,7 +374,7 @@ def start(case_name, **kwargs):
             update_cases_result(result_file, case_name, steps)
         else:
             log.debug("picture not match",
-                      common_function.get_current_dir('Test_Report', 'img', '{}_step4.png'.format(case_name)))
+                      common_function.get_current_dir('Test_Report', 'img', '{}_center.png'.format(case_name.replace(' ', '_'))))
             steps = {
                 'step_name': 'verify new center show',
                 'result': 'Fail',
@@ -355,6 +398,8 @@ def start(case_name, **kwargs):
                 'note': ''}
             update_cases_result(result_file, case_name, steps)
         else:
+            log.debug("picture not match",
+                      common_function.get_current_dir('Test_Report', 'img', '{}_expand.png'.format(case_name.replace(' ', '_'))))
             steps = {
                 'step_name': 'verify new expand show',
                 'result': 'Fail',
@@ -374,6 +419,8 @@ def start(case_name, **kwargs):
                 'note': ''}
             update_cases_result(result_file, case_name, steps)
         else:
+            log.debug("picture not match",
+                      common_function.get_current_dir('Test_Report', 'img', '{}_stretch.png'.format(case_name.replace(' ', '_'))))
             steps = {
                 'step_name': 'verify new stretch show',
                 'result': 'Fail',
@@ -393,7 +440,7 @@ def start(case_name, **kwargs):
             update_cases_result(result_file, case_name, steps)
         else:
             log.debug("picture not match",
-                      common_function.get_current_dir('Test_Report', 'img', '{}_step6.png'.format(case_name)))
+                      common_function.get_current_dir('Test_Report', 'img', '{}_tile.png'.format(case_name.replace(' ', '_'))))
             steps = {
                 'step_name': 'verify new tile show',
                 'result': 'Fail',
@@ -414,7 +461,7 @@ def start(case_name, **kwargs):
         reset_settings(value_ls)
         log.error(traceback.format_exc())
         error_pic = os.path.join(common_function.get_current_dir(),
-                                 r'Test_Report', 'img', '{}.png'.format(case_name))
+                                 r'Test_Report', 'img', '{}.png'.format(case_name.replace(' ', '_')))
         capture_screen(error_pic)
         os.popen("hptc-control-panel --term")
         pass

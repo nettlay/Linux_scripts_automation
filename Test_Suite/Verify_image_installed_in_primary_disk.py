@@ -3,6 +3,7 @@ from Test_Script.ts_precheck import network_function
 import Test_Script.ts_precheck.precheck_function as common_function_tp
 from Test_Script.ts_precheck import precheck_function
 from Common.tool import get_root_path
+from Common.common_function import *
 
 
 class CheckStorage:
@@ -44,11 +45,15 @@ class CheckStorage:
         primary_storage_size_matrix = self.get_size_matrix('primary')
         self.log.info('primary storage size from matrix: {}'.format(primary_storage_size_matrix))
         self.primary_card_label = precheck_function.primary_card_label()
+        if not self.primary_card_label:
+            self.log.info('Fail to get primary card label.')
+            return 'fail'
         self.log.info('primary_card_label: {}'.format(self.primary_card_label))
         self.primary_card_size_current = precheck_function.card_size(self.primary_card_label)
         self.log.info('primary_card_size_current with bytes: {}'.format(self.primary_card_size_current[1]))
         if not self.primary_card_size_current:
-            return 'fail to get current primary card size'
+            self.log.info('Fail to get current primary card size.')
+            return 'fail'
         if abs(int(self.primary_card_size_current[1][:-9]) - int(primary_storage_size_matrix)) <= 2:
             self.log.info('Image installed in primary disk {}.'.format(self.primary_card_label))
             return True
@@ -82,8 +87,10 @@ class CheckStorage:
 def start(case_name, **kwargs):
     common_function_tp.SwitchThinProMode(switch_to='admin')
     # report_file = network_function.system_ip() + '.yaml'
-    ip = common_function.check_ip_yaml()
-    report_file = get_root_path("Test_Report/{}.yaml".format(ip))
+    # ip = common_function.check_ip_yaml()
+    # report_file = get_root_path("Test_Report/{}.yaml".format(ip))
+    base_name = get_report_base_name()
+    report_file = get_current_dir('Test_Report', base_name)
     common_function.new_cases_result(report_file, case_name)  # new report
     check_storage = CheckStorage()
     primary_result = check_storage.check_image_in_primary_disk()
@@ -93,11 +100,11 @@ def start(case_name, **kwargs):
                  'expect': 'in primary disk',
                  'actual': 'in primary disk',
                  'note': 'none'}
-    elif primary_result == 'fail to get current primary card size':
+    elif primary_result == 'fail':
         step1 = {'step_name': 'Check whether image installed in primary disk',
                  'result': 'Fail',
                  'expect': 'in primary disk',
-                 'actual': 'fail to get current primary card size',
+                 'actual': 'Fail to get primary card label or fail to get current primary card size',
                  'note': 'none'}
     else:
         step1 = {'step_name': 'Check whether image installed in primary disk',
@@ -106,6 +113,8 @@ def start(case_name, **kwargs):
                  'actual': 'not in primary disk',
                  'note': 'none'}
     common_function.update_cases_result(report_file, case_name, step1)
+    if primary_result is not True:
+        return False
     extended_result = check_storage.check_disk_extended()
     if extended_result is True:
         step2 = {'step_name': 'Check whether disk is extended',

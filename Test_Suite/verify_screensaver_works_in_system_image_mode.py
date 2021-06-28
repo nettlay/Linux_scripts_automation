@@ -19,7 +19,8 @@ def select_system_image():
     for i in pic_list:
         time.sleep(1)
         icon_location = wait_element(os.path.join(path, i))
-        tool.click(icon_location[0][0], icon_location[0][1], 1)
+        if icon_location:
+            tool.click(icon_location[0][0], icon_location[0][1], 1)
 
 
 def rm_pic():

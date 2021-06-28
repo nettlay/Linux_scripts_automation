@@ -6,8 +6,10 @@ from Test_Script.ts_precheck.precheck_function import SwitchThinProMode
 def start(case_name, **kwargs):
     SwitchThinProMode(switch_to='admin')
     # ip = get_ip()
-    ip = check_ip_yaml()
-    path = get_root_path("Test_Report/{}.yaml".format(ip))
+    # ip = check_ip_yaml()
+    # path = get_root_path("Test_Report/{}.yaml".format(ip))
+    base_name = get_report_base_name()
+    path = get_current_dir('Test_Report', base_name)
     filename = "check_edocs_version"
     new_cases_result(path, case_name)
     with os.popen('dpkg -l|grep docs') as f:

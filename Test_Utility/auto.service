@@ -1,0 +1,9 @@
+[Unit]
+Description=auto
+
+[Service]
+ExecStart=/root/auto_start_setup.sh
+After=hptc-network-mgr.service
+
+[Install]
+WantedBy=multi-user.target

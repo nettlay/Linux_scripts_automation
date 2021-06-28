@@ -38,19 +38,22 @@ class PowerMenuChange:
             self.log.info('invalid user_mode {}'.format(user_mode))
 
     def open_power_menu(self):
-        pyautogui.hotkey('ctrl', 'alt', 's')
-        time.sleep(1)
-        pyautogui.typewrite('power manager', interval=0.25)
-        time.sleep(1)
-        pyautogui.hotkey('enter')
-        time.sleep(1)
-        result = self.wait_pictures('power_menu')
-        if result:
-            pyautogui.click(result[0], result[1])
-            self.log.info('Open power menu successfully.')
-            return True
+        for _ in range(2):
+            pyautogui.hotkey('ctrl', 'alt', 's')
+            time.sleep(1)
+            pyautogui.typewrite('power manager', interval=0.25)
+            time.sleep(1)
+            pyautogui.hotkey('enter')
+            time.sleep(1)
+            result = self.wait_pictures('power_menu')
+            if result:
+                break
         else:
+            self.log.info('Open power menu fail.')
             return False
+        pyautogui.click(result[0], result[1])
+        self.log.info('Open power menu successfully.')
+        return True
 
     def check_power_menu_default(self):
         power_menu_default = PowerMenuCheck()
@@ -204,22 +207,24 @@ class PowerMenuChange:
             time.sleep(1)
             self.log.info('Fail to find power option in desktop.')
             power_menu_desktop = False
-        pyautogui.hotkey('ctrl', 'alt', 's')
-        pyautogui.sleep(1)
-        power_option_start = self.wait_pictures('power_option_start')
-        if power_option_start:
-            pyautogui.click(power_option_start[0], power_option_start[1])
-            time.sleep(1)
-            power_menu_start = self.wait_pictures('power_menu_start')
-            if not power_menu_start:
-                pyautogui.screenshot(self.img_path + 'power_menu_start_{}.png'.format(postfix))
-                time.sleep(1)
-            time.sleep(1)
+        for _ in range(2):
+            pyautogui.hotkey('ctrl', 'alt', 's')
+            pyautogui.sleep(1)
+            power_option_start = self.wait_pictures('power_option_start')
+            if power_option_start:
+                break
         else:
             pyautogui.screenshot(self.img_path + 'power_option_start_{}.png'.format(postfix))
             time.sleep(1)
             self.log.info('Fail to find power option in Start menu.')
             power_menu_start = False
+        pyautogui.click(power_option_start[0], power_option_start[1])
+        time.sleep(1)
+        power_menu_start = self.wait_pictures('power_menu_start')
+        if not power_menu_start:
+            pyautogui.screenshot(self.img_path + 'power_menu_start_{}.png'.format(postfix))
+            time.sleep(1)
+        time.sleep(1)
         pyautogui.press('esc')
         return power_menu_desktop, power_menu_start
 
