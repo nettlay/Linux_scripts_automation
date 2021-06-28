@@ -145,3 +145,41 @@ class MemoryNotSufficient(Exception):
 
     def __str__(self):
         return self.s
+
+
+class CaseRunningError(Exception):
+    """
+    Main Error at Case Running
+    """
+    def __init__(self, s=""):
+        self.s = s
+
+    def __str__(self):
+        return self.s
+
+
+class PicOperatorError(CaseRunningError):
+    """
+    Extend it if you want to operate elements
+    """
+
+
+class ClickError(PicOperatorError):
+    pass
+
+
+class PathNotFoundError(CaseRunningError):
+    pass
+
+
+class PicNotFoundError(CaseRunningError):
+    """
+    Can't find Pic at CaseRunning
+    """
+
+
+class TimeOutError(CaseRunningError):
+    pass
+
+class NoAvailableStaticIP(CaseRunningError):
+    pass

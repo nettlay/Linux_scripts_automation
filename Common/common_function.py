@@ -418,7 +418,7 @@ def open_window(name):
     pyautogui.hotkey('ctrl', 'alt', 's')
     time.sleep(5)
     log.info("start type {}".format(name))
-    pyautogui.typewrite(name)
+    pyautogui.typewrite(name, interval=0.2)
     time.sleep(2)
     pyautogui.press('enter')
     time.sleep(3)

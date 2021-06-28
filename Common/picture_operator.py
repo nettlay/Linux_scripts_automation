@@ -38,8 +38,7 @@ def capture_screen(file_name, param="-m", auto_fix = False):
         os.makedirs(dir_path)
     call = subprocess.Popen("scrot {} {}".format(param, file_name), stderr=subprocess.PIPE, stdout=subprocess.PIPE, stdin=subprocess.PIPE, shell=True, env=os.environ)
     stdout, stderr = call.communicate(timeout=30)
-    log.info("info of capture,out:{},error:{}".format(stdout, stderr))
-    log.info("capture screenshot path:{}".format(file_name))
+    log.debug("[capture]info of capture,out:{},error:{}".format(stdout, stderr))
     if auto_fix:
         img = cv2.imread(file_name)
         n1_f = np.sum(img, axis=2) == 0
@@ -73,7 +72,7 @@ def get_position_by_pic(name, offset=(10, 10), **kwargs):
     :return: tuple,such as (12,12)
     """
     if isinstance(name, str) and os.path.isdir(name):
-        pic_list = get_folder_items(name, file_only=True)
+        pic_list = get_folder_items(name, file_only=True, filter_name=".png")
         assert pic_list, "pic is not exist in {}".format(name)
         pic_path_list = list(map(lambda x: name + "/{}".format(x), pic_list))
         name = pic_path_list
@@ -90,24 +89,10 @@ def get_icon_by_pictures(name, offset=(10, 10), **kwargs):
     sometimes you have several similar pic,but only
     one picture location will be located
     """
-    rate = kwargs.get("rate", 0.9)
     for pic in name:
-        capture_screen('demo.png')
-        img_name = cv2.imread(pic)
-        t = cv2.matchTemplate(cv2.imread('demo.png'), img_name, cv2.TM_CCOEFF_NORMED)
-        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(t)
-        log.info("current match picture: {}".format(pic))
-        log.info("rate: {}; picture Similarity: {}".format(rate, max_val))
-        if max_val > rate:
-            x = max_loc[0]
-            y = max_loc[1]
-            # os.remove('demo.png')
-            return (x + offset[0], y + offset[1]), img_name.shape
-        else:
-            path = get_current_dir("Test_Data/temp_log.txt")
-            with open(path, "a+") as f:
-                f.write("{} {}".format(max_val, pic))
-            continue
+        result = get_icon_by_pic(name=pic, offset=offset, **kwargs)
+        if result:
+            return result
     return None
 
 
@@ -119,31 +104,27 @@ def get_icon_by_pic(name, offset=(10, 10), **kwargs):
     :return: (offset:(x,y),shape:(y,x,3))
     """
     rate = kwargs.get("rate", 0.9)
-    capture_screen('demo.png')
+    path_demo = get_current_dir('demo.png')
+    capture_screen(path_demo)
     img_name = cv2.imread(name)
-    t = cv2.matchTemplate(cv2.imread("demo.png"), img_name,
+    t = cv2.matchTemplate(cv2.imread(path_demo), img_name,
                           cv2.TM_CCOEFF_NORMED)
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(t)
-    log.info("current match picture: {}".format(name))
-    log.info("rate: {}; Similarity: {}".format(rate, max_val))
+    log.debug("[get pic icon]current match picture: {}, Similarity:{:.3f}/{}".format(name, max_val, rate))
     if max_val > rate:
         x = max_loc[0]
         y = max_loc[1]
-        # os.remove('demo.png')
         return (x + offset[0], y + offset[1]), img_name.shape
     else:
-        path = get_current_dir("Test_Data/temp_log.txt")
-        with open(path, "a+") as f:
-            f.write("{} {}".format(max_val, name))
         return None
 
 
-def compare_pic_similarity(img, tmp):
+def compare_pic_similarity(img, tmp, rate=0.9):
     img_name = cv2.imread(img)
     img_tmp = cv2.imread(tmp)
     t = cv2.matchTemplate(img_name, img_tmp, cv2.TM_CCOEFF_NORMED)
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(t)
-    if max_val > 0.9:
+    if max_val > rate:
         return max_loc, img_name.shape
     return False
 

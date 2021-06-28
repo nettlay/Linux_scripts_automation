@@ -106,7 +106,7 @@ class GenerateReport:
                 if item[0] == each_result['case_name']:
                     current_case_list.append(each_result)
             final_data.append([item[0], current_case_list, item[1], item[2], 0, item[1] + item[2]])
-        # get last item in list
+        # get last created_item in list
         total_item = raw_data.pop()
         data_dict['final_data'] = final_data
         data_dict['passCount'] = total_item[1]
